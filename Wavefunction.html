@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ສິມຜິນຄື້ນກົນຈັກ</title>
+<style>
+  :root {
+    --bg: #0d0f1a;
+    --bg2: #13162a;
+    --bg3: #1a1f38;
+    --accent: #00d4ff;
+    --accent2: #a855f7;
+    --accent3: #f59e0b;
+    --text: #e8eaf0;
+    --text2: #8892b0;
+    --border: rgba(255,255,255,0.08);
+    --panel: #161929;
+    --input-bg: #0d0f1a;
+    --radius: 10px;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; width: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; overflow: hidden; }
+
+  /* ===== LAYOUT ===== */
+  #app { display: flex; height: 100vh; width: 100%; }
+
+  /* LEFT: simulation panel */
+  #sim-panel {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  /* sim header */
+  #sim-header {
+    padding: 12px 18px 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #sim-header h1 { font-size: 18px; font-weight: 600; color: var(--accent); letter-spacing: 0.02em; }
+  #sim-header .sub { font-size: 11px; color: var(--text2); margin-top: 2px; font-family: 'Courier New', monospace; }
+  #eq-display {
+    margin-top: 8px;
+    background: rgba(0,212,255,0.06);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  #eq-display .vals { font-size: 11px; color: var(--text2); }
+  #eq-display .result { color: var(--accent3); font-weight: 600; }
+
+  /* canvas area */
+  #canvas-wrap {
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 8px 12px;
+    position: relative;
+  }
+  #waveCanvas {
+    width: 100%; height: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: block;
+  }
+
+  /* sim controls row */
+  #sim-controls {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+  .ctrl-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .ctrl-btn {
+    background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent); border-radius: 6px; padding: 4px 10px;
+    font-size: 12px; cursor: pointer; transition: background 0.15s;
+  }
+  .ctrl-btn:hover { background: rgba(0,212,255,0.2); }
+  #t-display { font-family: monospace; font-size: 12px; color: var(--accent3); margin-left: auto; }
+
+  /* RIGHT: controls + chat */
+  #right-panel {
+    width: 300px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    overflow: hidden;
+  }
+
+  /* wave parameters */
+  #params-section {
+    flex-shrink: 0;
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    color: var(--text2); text-transform: uppercase; margin-bottom: 10px;
+  }
+  .param-row { margin-bottom: 10px; }
+  .param-label {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--text2); margin-bottom: 4px;
+  }
+  .param-label span:last-child { color: var(--accent3); font-family: monospace; font-weight: 600; }
+  input[type=range] {
+    width: 100%; -webkit-appearance: none; height: 3px;
+    background: var(--bg3); border-radius: 2px; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    background: var(--accent); border-radius: 50%; cursor: pointer;
+  }
+  .param-derived { font-size: 11px; color: var(--text2); margin-top: 3px; font-family: monospace; }
+  .param-derived span { color: var(--accent2); }
+
+  /* speed toggle */
+  #speed-btns { display: flex; gap: 6px; margin-top: 6px; }
+  .spd-btn {
+    flex: 1; padding: 5px; text-align: center; border-radius: 6px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text2); font-size: 11px; cursor: pointer; transition: all 0.15s;
+  }
+  .spd-btn.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+  /* play/step */
+  #playrow { display: flex; gap: 6px; margin-top: 8px; }
+  .play-btn {
+    flex: 1; padding: 7px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 12px; font-family: var(--font); font-weight: 600; transition: opacity 0.15s;
+  }
+  #btnPause { background: var(--accent); color: #000; }
+  #btnReset { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+  #btnStep { background: transparent; border: 1px solid rgba(0,212,255,0.3); color: var(--accent); font-size: 11px; }
+
+  /* ===== CHAT PANEL ===== */
+  #chat-section {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--border);
+  }
+  #chat-header {
+    padding: 10px 14px 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  #chat-header .claude-dot {
+    width: 8px; height: 8px; background: var(--accent2); border-radius: 50%;
+    box-shadow: 0 0 6px var(--accent2); animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  #chat-header span { font-size: 12px; font-weight: 600; color: var(--text); }
+  #chat-header .hint { font-size: 10px; color: var(--text2); margin-left: auto; }
+
+  #chat-messages {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 10px;
+    scroll-behavior: smooth;
+  }
+  #chat-messages::-webkit-scrollbar { width: 4px; }
+  #chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .msg { display: flex; gap: 8px; align-items: flex-start; }
+  .msg.user { flex-direction: row-reverse; }
+  .msg-avatar {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .msg.assistant .msg-avatar { background: var(--accent2); color: #fff; }
+  .msg.user .msg-avatar { background: var(--accent); color: #000; }
+  .msg-bubble {
+    max-width: 88%; padding: 8px 10px; border-radius: 10px;
+    font-size: 12px; line-height: 1.6; word-break: break-word;
+  }
+  .msg.assistant .msg-bubble { background: var(--bg3); color: var(--text); border-top-left-radius: 2px; }
+  .msg.user .msg-bubble { background: rgba(0,212,255,0.12); border: 1px solid rgba(0,212,255,0.2); color: var(--text); border-top-right-radius: 2px; }
+
+  .typing-indicator { display: flex; gap: 4px; align-items: center; padding: 4px 2px; }
+  .typing-dot {
+    width: 6px; height: 6px; background: var(--text2); border-radius: 50%;
+    animation: typingBounce 1.2s infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+
+  /* chat input */
+  #chat-input-area {
+    flex-shrink: 0;
+    padding: 8px 10px 10px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 6px; align-items: flex-end;
+  }
+  #chat-input {
+    flex: 1; background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; color: var(--text);
+    font-family: var(--font); font-size: 12px; resize: none; outline: none;
+    min-height: 36px; max-height: 100px; line-height: 1.5;
+    transition: border-color 0.15s;
+  }
+  #chat-input:focus { border-color: rgba(0,212,255,0.35); }
+  #chat-input::placeholder { color: var(--text2); }
+  #send-btn {
+    width: 34px; height: 34px; border-radius: 8px; border: none;
+    background: var(--accent); color: #000; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: opacity 0.15s; font-size: 15px;
+  }
+  #send-btn:hover { opacity: 0.85; }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* quick chips */
+  #quick-chips {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    padding: 4px 10px 0;
+    flex-shrink: 0;
+  }
+  .chip {
+    padding: 3px 8px; border-radius: 12px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text2); font-size: 10px; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.06); }
+
+  /* resize handle */
+  #resize-handle {
+    width: 4px; cursor: col-resize; background: transparent;
+    flex-shrink: 0; transition: background 0.15s; position: relative;
+  }
+  #resize-handle:hover, #resize-handle.dragging { background: rgba(0,212,255,0.3); }
+
+  /* math formatting */
+  .math-inline { font-family: 'Courier New', monospace; color: var(--accent3); background: rgba(245,158,11,0.1); padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+  .msg-bubble ul { padding-left: 14px; }
+  .msg-bubble li { margin-bottom: 2px; }
+  .msg-bubble strong { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- ===== SIM PANEL ===== -->
+  <div id="sim-panel">
+    <div id="sim-header">
+      <h1>ສິມຜິນຄື້ນກົນຈັກ</h1>
+      <div class="sub">Mechanical Wave Equation: y = f(x, t)</div>
+      <div id="eq-display">
+        <span id="eq-text">y = 1.00 · sin(2π(t/1.00 − x/2.00))</span>
+        <div class="vals">
+          <span id="eq-vals"></span>
+          <span class="result" id="eq-result"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="canvas-wrap">
+      <canvas id="waveCanvas"></canvas>
+    </div>
+
+    <div id="sim-controls">
+      <div class="ctrl-item">
+        <span class="dot" style="background:#f472b6"></span>
+        <span>ຈຸດ P₁ (x₁)</span>
+      </div>
+      <div class="ctrl-item">
+        <span class="dot" style="background:#fb923c"></span>
+        <span>ຈຸດ P₂ (x₂)</span>
+      </div>
+      <button class="ctrl-btn" onclick="togglePoints()">ປ່ຽນຕຳແໜ່ງ x</button>
+      <span id="t-display">t = 0.000 s</span>
+    </div>
+  </div>
+
+  <!-- resize handle -->
+  <div id="resize-handle"></div>
+
+  <!-- ===== RIGHT PANEL ===== -->
+  <div id="right-panel">
+    <!-- wave params -->
+    <div id="params-section">
+      <div class="section-title">ພາລາມີເຕີຄື້ນ</div>
+
+      <div class="param-row">
+        <div class="param-label"><span>A ແອມຟລິຈິວ</span><span id="valA">1.00 m</span></div>
+        <input type="range" id="slA" min="0.1" max="3" step="0.1" value="1">
+      </div>
+
+      <div class="param-row">
+        <div class="param-label"><span>f ຄວາມຖີ່</span><span id="valF">1.00 Hz</span></div>
+        <input type="range" id="slF" min="0.1" max="5" step="0.1" value="1">
+        <div class="param-derived">T = 1/f = <span id="valT">1.000</span> s &nbsp;|&nbsp; ω = <span id="valOm">6.28</span> rad/s</div>
+      </div>
+
+      <div class="param-row">
+        <div class="param-label"><span>λ ຄວາມຍາວ</span><span id="valL">2.00 m</span></div>
+        <input type="range" id="slL" min="0.5" max="8" step="0.1" value="2">
+        <div class="param-derived">k = 2π/λ = <span id="valK">3.14</span> rad/m</div>
+      </div>
+
+      <div class="section-title" style="margin-top:10px">ຄວາມໄວການຫຼິ້ນ</div>
+      <div id="speed-btns">
+        <button class="spd-btn" onclick="setSpeed(0.25)">×¼ ຊ້າ</button>
+        <button class="spd-btn active" onclick="setSpeed(1)">ປົກກະຕິ</button>
+        <button class="spd-btn" onclick="setSpeed(2)">×2 ໄວ</button>
+      </div>
+
+      <div id="playrow">
+        <button class="play-btn" id="btnPause" onclick="togglePause()">⏸ ຢຸດ</button>
+        <button class="play-btn" id="btnReset" onclick="resetAnim()">↺ ໃໝ່</button>
+      </div>
+      <button class="play-btn" id="btnStep" onclick="stepAnim()" style="width:100%;margin-top:6px">▶| ຂ້າມໄປ 1 ກ້າວ (+Δt)</button>
+    </div>
+
+    <!-- chat section -->
+    <div id="chat-section">
+      <div id="chat-header">
+        <div class="claude-dot"></div>
+        <span>ຖາມ Claude</span>
+        <span class="hint">ກ່ຽວກັບຄື້ນ</span>
+      </div>
+
+      <div id="quick-chips">
+        <button class="chip" onclick="sendChip('ຄື້ນໂຕ ຄືແນວໃດ?')">ຄື້ນໂຕ ຄືແນວໃດ?</button>
+        <button class="chip" onclick="sendChip('λ ແລະ f ສຳພັນກັນແນວໃດ?')">λ vs f</button>
+        <button class="chip" onclick="sendChip('ສູດ y = A sin(ωt - kx) ໝາຍຄວາມວ່າຫຍັງ?')">ສູດ y=?</button>
+        <button class="chip" onclick="sendChip('ຄວາມໄວຂອງຄື້ນ v = fλ ອະທິບາຍ')">v = fλ</button>
+      </div>
+
+      <div id="chat-messages">
+        <div class="msg assistant">
+          <div class="msg-avatar">C</div>
+          <div class="msg-bubble">ສະບາຍດີ! ຂ້ອຍແມ່ນ Claude 👋<br>ຖາມຂ້ອຍໄດ້ທຸກຢ່າງກ່ຽວກັບ <strong>ຄື້ນກົນຈັກ</strong> — ສູດ, ພາລາມີເຕີ, ຫຼືຫຍັງທີ່ສົງໄສ.</div>
+        </div>
+      </div>
+
+      <div id="chat-input-area">
+        <textarea id="chat-input" placeholder="ພິມຄຳຖາມ..." rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button id="send-btn" onclick="sendMessage()" title="ສົ່ງ">➤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== WAVE SIMULATION =====
+const canvas = document.getElementById('waveCanvas');
+const ctx = canvas.getContext('2d');
+
+let A = 1, f = 1, lam = 2;
+let simTime = 0, paused = false, speed = 1;
+let x1 = 1, x2 = 3;
+let animId = null, lastTs = null;
+const DT = 1/60;
+
+function omega() { return 2*Math.PI*f; }
+function k() { return 2*Math.PI/lam; }
+function y(x,t) { return A * Math.sin(omega()*t - k()*x); }
+
+function resizeCanvas() {
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+}
+
+function drawWave() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  const midY = H/2;
+  const xRange = 8.5;
+  const pxPerM = (W - 80) / xRange;
+  const pxPerAmp = (H*0.38) / Math.max(A, 0.5);
+  const leftPad = 48;
+
+  // grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let gx = 0; gx <= 8; gx++) {
+    const px = leftPad + gx * pxPerM;
+    ctx.beginPath(); ctx.moveTo(px,10); ctx.lineTo(px,H-28); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(gx, px, H-12);
+  }
+  for (let gy = -2; gy <= 2; gy++) {
+    const py = midY - gy * pxPerAmp;
+    ctx.beginPath(); ctx.moveTo(leftPad-6, py); ctx.lineTo(W-10, py); ctx.stroke();
+    if(gy !== 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.textAlign = 'right';
+      ctx.fillText(gy, leftPad-9, py+4);
+    }
+  }
+  // axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(leftPad,10); ctx.lineTo(leftPad,H-28); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(leftPad,midY); ctx.lineTo(W-10,midY); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('x (m)', W-16, midY+14);
+  ctx.save(); ctx.translate(12,midY); ctx.rotate(-Math.PI/2);
+  ctx.fillText('y (m)', 0, 0); ctx.restore();
+
+  // wave glow
+  for (let pass = 0; pass < 2; pass++) {
+    ctx.beginPath();
+    const steps = Math.floor(W*1.5);
+    for (let i = 0; i <= steps; i++) {
+      const xm = (i/steps)*xRange;
+      const px = leftPad + xm*pxPerM;
+      const py = midY - y(xm, simTime)*pxPerAmp;
+      i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+    }
+    if(pass===0) { ctx.strokeStyle='rgba(0,212,255,0.08)'; ctx.lineWidth=8; }
+    else { ctx.strokeStyle='rgba(0,212,255,0.9)'; ctx.lineWidth=2; }
+    ctx.stroke();
+  }
+
+  // particle dots
+  const dotXs = [];
+  for(let xi = 0; xi <= xRange; xi += lam/4) dotXs.push(xi);
+  for(const xm of dotXs) {
+    if(xm > xRange) continue;
+    const px = leftPad + xm*pxPerM;
+    const py = midY - y(xm, simTime)*pxPerAmp;
+    const norm = Math.abs(y(xm,simTime)/A);
+    ctx.beginPath(); ctx.arc(px,py,3.5,0,2*Math.PI);
+    const h = Math.floor(200 + norm*60);
+    ctx.fillStyle = `hsla(${h},80%,65%,0.85)`; ctx.fill();
+  }
+
+  // P1 marker
+  const p1x = leftPad + x1*pxPerM;
+  const p1y = midY - y(x1,simTime)*pxPerAmp;
+  ctx.beginPath(); ctx.arc(p1x,p1y,8,0,2*Math.PI);
+  ctx.fillStyle='rgba(244,114,182,0.9)'; ctx.fill();
+  ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(p1x,midY); ctx.lineTo(p1x,midY-4);
+  ctx.strokeStyle='rgba(244,114,182,0.4)'; ctx.lineWidth=1; ctx.stroke();
+  ctx.fillStyle='#f472b6'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('x1 P1', p1x, midY+16);
+  // y1 dashed
+  const y1m = y(x1,simTime);
+  ctx.setLineDash([4,4]);
+  ctx.strokeStyle='rgba(244,114,182,0.35)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(leftPad,p1y); ctx.lineTo(p1x,p1y); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#f472b6'; ctx.font='10px monospace'; ctx.textAlign='right';
+  ctx.fillText('y1='+y1m.toFixed(3), leftPad-2, p1y+4);
+
+  // P2 marker
+  const p2x = leftPad + x2*pxPerM;
+  const p2y = midY - y(x2,simTime)*pxPerAmp;
+  ctx.beginPath(); ctx.arc(p2x,p2y,8,0,2*Math.PI);
+  ctx.fillStyle='rgba(251,146,60,0.9)'; ctx.fill();
+  ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle='#fb923c'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('x2 P2', p2x, midY+16);
+  const y2m = y(x2,simTime);
+  ctx.setLineDash([4,4]);
+  ctx.strokeStyle='rgba(251,146,60,0.35)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(leftPad,p2y); ctx.lineTo(p2x,p2y); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#fb923c'; ctx.font='10px monospace'; ctx.textAlign='right';
+  ctx.fillText('y2='+y2m.toFixed(3), leftPad-2, p2y+4);
+
+  // update eq display
+  const Af=A.toFixed(2), ff=f.toFixed(2), lf=lam.toFixed(2);
+  document.getElementById('eq-text').textContent = `y = ${Af} · sin(2π(t/${ff} − x/${lf}))`;
+  document.getElementById('eq-vals').textContent = `ເວລາ t = ${simTime.toFixed(3)} s  |  ຕຳແໜ່ງ x₁ = ${x1.toFixed(2)} m  |  y₁ = ${y1m.toFixed(3)} m    x₂ = ${x2.toFixed(2)} m  |  y₂ = ${y2m.toFixed(3)} m`;
+  document.getElementById('t-display').textContent = `t = ${simTime.toFixed(3)} s`;
+}
+
+function loop(ts) {
+  if (!lastTs) lastTs = ts;
+  const dt = (ts - lastTs) / 1000;
+  lastTs = ts;
+  if (!paused) simTime += dt * speed;
+  drawWave();
+  animId = requestAnimationFrame(loop);
+}
+
+function togglePause() {
+  paused = !paused; lastTs = null;
+  document.getElementById('btnPause').textContent = paused ? '▶ ຫຼິ້ນ' : '⏸ ຢຸດ';
+}
+function resetAnim() { simTime = 0; lastTs = null; }
+function stepAnim() { paused = true; simTime += 1/60; drawWave(); document.getElementById('btnPause').textContent='▶ ຫຼິ້ນ'; }
+function setSpeed(s) {
+  speed = s;
+  document.querySelectorAll('.spd-btn').forEach((b,i)=>{
+    b.classList.toggle('active', [0.25,1,2][i]===s);
+  });
+}
+function togglePoints() {
+  x1 = parseFloat((Math.random()*3+0.5).toFixed(1));
+  x2 = parseFloat((x1 + lam*0.5 + Math.random()*lam).toFixed(1));
+  if(x2 > 7.5) x2 = 7.5;
+}
+
+// sliders
+document.getElementById('slA').addEventListener('input',function(){
+  A=+this.value;
+  document.getElementById('valA').textContent=A.toFixed(2)+' m';
+});
+document.getElementById('slF').addEventListener('input',function(){
+  f=+this.value;
+  document.getElementById('valF').textContent=f.toFixed(2)+' Hz';
+  document.getElementById('valT').textContent=(1/f).toFixed(3);
+  document.getElementById('valOm').textContent=(2*Math.PI*f).toFixed(2);
+});
+document.getElementById('slL').addEventListener('input',function(){
+  lam=+this.value;
+  document.getElementById('valL').textContent=lam.toFixed(2)+' m';
+  document.getElementById('valK').textContent=(2*Math.PI/lam).toFixed(2);
+});
+
+// ===== RESIZE HANDLE =====
+const handle = document.getElementById('resize-handle');
+const rightPanel = document.getElementById('right-panel');
+let dragging = false, startX = 0, startW = 0;
+handle.addEventListener('mousedown', e => {
+  dragging = true; startX = e.clientX; startW = rightPanel.offsetWidth;
+  handle.classList.add('dragging');
+  document.body.style.userSelect = 'none';
+});
+document.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const delta = startX - e.clientX;
+  const newW = Math.max(220, Math.min(520, startW + delta));
+  rightPanel.style.width = newW + 'px';
+});
+document.addEventListener('mouseup', () => {
+  dragging = false; handle.classList.remove('dragging');
+  document.body.style.userSelect = '';
+  resizeCanvas(); drawWave();
+});
+
+// ===== CHAT =====
+const messagesEl = document.getElementById('chat-messages');
+const inputEl = document.getElementById('chat-input');
+let chatHistory = [
+  { role: 'user', content: 'ເຈົ້າເປັນຜູ້ຊ່ວຍສອນຟີຊິກລາວ ສຳລັບ Simulation ຄື້ນກົນຈັກ. ຕອບໃນພາສາລາວ ສັ້ນ ຊັດ ມີສູດ math ເທົ່າທີ່ຈຳເປັນ.' },
+  { role: 'assistant', content: 'ສະບາຍດີ! ຂ້ອຍພ້ອມຊ່ວຍອະທິບາຍຄື້ນກົນຈັກ ຖາມໄດ້ເລີຍ.' }
+];
+
+function appendMsg(role, html) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  const av = document.createElement('div');
+  av.className = 'msg-avatar';
+  av.textContent = role === 'assistant' ? 'C' : 'ຂ';
+  const bub = document.createElement('div');
+  bub.className = 'msg-bubble';
+  bub.innerHTML = html;
+  div.appendChild(av); div.appendChild(bub);
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return bub;
+}
+
+function formatResponse(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<span class="math-inline">$1</span>')
+    .replace(/\n- /g, '\n• ')
+    .replace(/\n/g, '<br>');
+}
+
+async function sendMessage(overrideText) {
+  const text = overrideText || inputEl.value.trim();
+  if (!text) return;
+  if (!overrideText) { inputEl.value = ''; autoResize(inputEl); }
+  document.getElementById('send-btn').disabled = true;
+
+  appendMsg('user', text);
+
+  // add context about current sim state
+  const ctx_msg = `[Sim state: A=${A}m, f=${f}Hz, λ=${lam}m, t=${simTime.toFixed(2)}s] ` + text;
+  chatHistory.push({ role: 'user', content: ctx_msg });
+
+  // typing indicator
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'msg assistant';
+  typingDiv.innerHTML = '<div class="msg-avatar">C</div><div class="msg-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
+  messagesEl.appendChild(typingDiv);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: 'ເຈົ້າເປັນຜູ້ຊ່ວຍສອນຟີຊິກລາວ ສຳລັບ Simulation ຄື້ນກົນຈັກ. ຕອບໃນພາສາລາວ ສັ້ນ ຊັດ ເໝາະນັກຮຽນ ມ. ປາຍ. ໃຊ້ backtick ສຳລັບສູດ math ເຊັ່ນ `y = A sin(ωt - kx)`. ຖ້າ sim state ຖືກສົ່ງ ໃຫ້ອ້າງອີງຄ່ານັ້ນດ້ວຍ.',
+        messages: chatHistory.slice(-10)
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || 'ຂໍໂທດ, ເກີດຂໍ້ຜິດພາດ.';
+    chatHistory.push({ role: 'assistant', content: reply });
+    typingDiv.remove();
+    appendMsg('assistant', formatResponse(reply));
+  } catch(e) {
+    typingDiv.remove();
+    appendMsg('assistant', 'ຂໍໂທດ, ການເຊື່ອມຕໍ່ລົ້ມເຫຼວ. ກະລຸນາລອງໃໝ່.');
+  }
+  document.getElementById('send-btn').disabled = false;
+}
+
+function sendChip(text) { sendMessage(text); }
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+function autoResize(el) {
+  el.style.height = '36px';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// ===== INIT =====
+window.addEventListener('resize', () => { resizeCanvas(); drawWave(); });
+resizeCanvas();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

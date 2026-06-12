@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ຄວາມແຕກຕ່າງຂອງລະດັບຄວາມເຂັ້ມສຽງ</title>
+<link href="https://fonts.googleapis.com/css2?family=Phetsarath+OT&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0a0e1a;
+    --bg-panel: #111827;
+    --bg-card: #1a2236;
+    --bg-card2: #1e2a40;
+    --accent-a: #38bdf8;
+    --accent-b: #fb923c;
+    --accent-diff: #a78bfa;
+    --accent-green: #34d399;
+    --text-primary: #f0f4ff;
+    --text-secondary: #8899bb;
+    --border: #2a3a5a;
+    --wave-color: rgba(56, 189, 248, 0.15);
+    --font: 'Phetsarath OT', 'Noto Sans Lao', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: linear-gradient(90deg, #0d1730 0%, #131f3a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  header .icon { font-size: 2rem; }
+  header h1 { font-size: 1.15rem; font-weight: 700; line-height: 1.3; }
+  header p { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
+
+  .main-wrap {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 16px;
+    gap: 16px;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Canvas area */
+  .canvas-section {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+  }
+  .canvas-label {
+    position: absolute;
+    top: 10px; left: 14px;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    z-index: 10;
+  }
+  canvas#simCanvas {
+    display: block;
+    width: 100%;
+    cursor: grab;
+  }
+  canvas#simCanvas:active { cursor: grabbing; }
+
+  /* Bottom layout */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media(max-width: 680px) { .bottom-grid { grid-template-columns: 1fr; } }
+
+  .data-col { display: flex; flex-direction: column; gap: 12px; }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .card.card-a { border-left: 3px solid var(--accent-a); }
+  .card.card-b { border-left: 3px solid var(--accent-b); }
+  .card.card-diff { border-left: 3px solid var(--accent-diff); background: #1a1a2e; }
+  .card.card-ctrl { border-left: 3px solid var(--accent-green); }
+
+  .card-title {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dot-a { background: var(--accent-a); }
+  .dot-b { background: var(--accent-b); }
+  .dot-diff { background: var(--accent-diff); }
+  .dot-g { background: var(--accent-green); }
+
+  .data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 4px 0;
+    border-bottom: 1px solid #1e2d46;
+    font-size: 0.85rem;
+  }
+  .data-row:last-child { border-bottom: none; }
+  .data-label { color: var(--text-secondary); }
+  .data-value { font-weight: 700; font-size: 0.95rem; }
+  .val-a { color: var(--accent-a); }
+  .val-b { color: var(--accent-b); }
+
+  /* Big diff display */
+  .diff-big {
+    text-align: center;
+    padding: 6px 0 2px;
+  }
+  .diff-num {
+    font-size: 3.2rem;
+    font-weight: 900;
+    color: var(--accent-diff);
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(167, 139, 250, 0.5);
+  }
+  .diff-unit { font-size: 1rem; color: var(--text-secondary); margin-top: 2px; }
+  .formula-box {
+    background: #0d1730;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: #a0bce0;
+    font-family: 'Courier New', monospace;
+    line-height: 1.7;
+  }
+  .formula-box span { color: var(--accent-diff); }
+
+  /* Controls */
+  .ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .ctrl-label { font-size: 0.82rem; color: var(--text-secondary); min-width: 80px; }
+  input[type=range] {
+    flex: 1;
+    accent-color: var(--accent-green);
+    height: 5px;
+    cursor: pointer;
+  }
+  .ctrl-val {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    min-width: 62px;
+    text-align: right;
+  }
+
+  .mode-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .toggle-btn {
+    flex: 1;
+    min-width: 110px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-deep);
+    color: var(--text-secondary);
+    font-family: var(--font);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-btn.active {
+    background: #1a2e1a;
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+  }
+
+  .action-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .btn {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    font-family: var(--font);
+    font-size: 0.83rem;
+    cursor: pointer;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+  .btn-mute { background: #1a2030; color: var(--accent-a); border-color: var(--accent-a); }
+  .btn-mute:hover { background: #0e2236; }
+  .btn-reset { background: #1a2030; color: var(--accent-b); border-color: var(--accent-b); }
+  .btn-reset:hover { background: #2a1a10; }
+
+  .hint-text {
+    font-size: 0.73rem;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="icon">🔊</div>
+  <div>
+    <h1>ຄວາມແຕກຕ່າງຂອງລະດັບຄວາມເຂັ້ມສຽງ</h1>
+    <p>Difference in Sound Intensity Levels — Interactive Simulation</p>
+  </div>
+</header>
+
+<div class="main-wrap">
+
+  <div class="canvas-section">
+    <div class="canvas-label">ພື້ນທີ່ຈໍາລອງ — ລາກຜູ້ຟັງໄດ້</div>
+    <canvas id="simCanvas"></canvas>
+    <p class="hint-text" style="padding: 6px 0 10px;">🖱️ ລາກ <span style="color:var(--accent-a)">ຜູ້ຟັງ A</span> ຫຼື <span style="color:var(--accent-b)">ຜູ້ຟັງ B</span> ເພື່ອປ່ຽນໄລຍະຫ່າງ</p>
+  </div>
+
+  <div class="bottom-grid">
+
+    <!-- Left: Data cards -->
+    <div class="data-col">
+
+      <div class="card card-a">
+        <div class="card-title"><span class="dot dot-a"></span> ຈຸດ A — ຜູ້ຟັງ A</div>
+        <div class="data-row"><span class="data-label">ໄລຍະຫ່າງ R₁</span><span class="data-value val-a" id="valR1">—</span></div>
+        <div class="data-row"><span class="data-label">ກຳລັງ P₁</span><span class="data-value val-a" id="valP1">—</span></div>
+        <div class="data-row"><span class="data-label">ຄວາມເຂັ້ມ I₁</span><span class="data-value val-a" id="valI1">—</span></div>
+        <div class="data-row"><span class="data-label">ລະດັບ β₁</span><span class="data-value val-a" id="valB1">—</span></div>
+      </div>
+
+      <div class="card card-b">
+        <div class="card-title"><span class="dot dot-b"></span> ຈຸດ B — ຜູ້ຟັງ B</div>
+        <div class="data-row"><span class="data-label">ໄລຍະຫ່າງ R₂</span><span class="data-value val-b" id="valR2">—</span></div>
+        <div class="data-row"><span class="data-label">ກຳລັງ P₂</span><span class="data-value val-b" id="valP2">—</span></div>
+        <div class="data-row"><span class="data-label">ຄວາມເຂັ້ມ I₂</span><span class="data-value val-b" id="valI2">—</span></div>
+        <div class="data-row"><span class="data-label">ລະດັບ β₂</span><span class="data-value val-b" id="valB2">—</span></div>
+      </div>
+
+      <div class="card card-diff">
+        <div class="card-title"><span class="dot dot-diff"></span> ຄວາມແຕກຕ່າງ Δβ</div>
+        <div class="diff-big">
+          <div class="diff-num" id="valDiff">0.0</div>
+          <div class="diff-unit">dB</div>
+        </div>
+        <div class="formula-box" id="formulaBox">
+          <span>Δβ = 10 × log₁₀(I₂ / I₁)</span><br>
+          <span id="formulaDetail"></span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Controls -->
+    <div class="data-col">
+      <div class="card card-ctrl">
+        <div class="card-title"><span class="dot dot-g"></span> ຄວບຄຸມ ແລະ ປັບຄ່າ</div>
+
+        <div class="mode-toggle">
+          <button class="toggle-btn active" id="btnModeP" onclick="setMode('varyR')">🔒 P ເທົ່າກັນ, ປ່ຽນ R</button>
+          <button class="toggle-btn" id="btnModeR" onclick="setMode('varyP')">🔒 R ເທົ່າກັນ, ປ່ຽນ P</button>
+          <button class="toggle-btn" id="btnModeFree" onclick="setMode('free')">🔓 ອິດສະຫຼະ</button>
+        </div>
+
+        <div id="ctrlPsingle">
+          <div class="ctrl-row">
+            <span class="ctrl-label">ກຳລັງ P</span>
+            <input type="range" id="sliderP" min="0.01" max="200" step="0.1" value="10" oninput="onSliderP()">
+            <span class="ctrl-val" id="lblP">10 W</span>
+          </div>
+        </div>
+
+        <div id="ctrlPdual" style="display:none">
+          <div class="ctrl-row">
+            <span class="ctrl-label" style="color:var(--accent-a)">ກຳລັງ P₁</span>
+            <input type="range" id="sliderP1" min="0.01" max="200" step="0.1" value="10" oninput="onSliderP1()">
+            <span class="ctrl-val" id="lblP1">10 W</span>
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label" style="color:var(--accent-b)">ກຳລັງ P₂</span>
+            <input type="range" id="sliderP2" min="0.01" max="200" step="0.1" value="20" oninput="onSliderP2()">
+            <span class="ctrl-val" id="lblP2">20 W</span>
+          </div>
+        </div>
+
+        <div id="ctrlRlock" style="display:none">
+          <div class="ctrl-row">
+            <span class="ctrl-label">ໄລຍະ R</span>
+            <input type="range" id="sliderRlock" min="1" max="50" step="0.5" value="10" oninput="onSliderRlock()">
+            <span class="ctrl-val" id="lblRlock">10 m</span>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-mute" id="btnMute" onclick="toggleMute()">🔇 ປິດສຽງ</button>
+          <button class="btn btn-reset" onclick="resetAll()">🔄 ເລີ່ມໃໝ່</button>
+        </div>
+
+        <div style="margin-top:14px; padding:10px; background:#0d1730; border-radius:8px; font-size:0.77rem; color:var(--text-secondary); line-height:1.8;">
+          <b style="color:var(--text-primary)">ສູດທີ່ໃຊ້:</b><br>
+          I = P / (4π R²) &nbsp; [W/m²]<br>
+          β = 10 log₁₀(I / I₀) &nbsp; [dB]<br>
+          I₀ = 10⁻¹² W/m²<br>
+          <span style="color:var(--accent-diff)">Δβ = β₂ − β₁ = 10 log₁₀(I₂/I₁)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== State =====
+const I0 = 1e-12;
+let mode = 'varyR'; // varyR, varyP, free
+let P1 = 10, P2 = 10;
+let muted = false;
+let audioCtx = null, gainNode = null, oscillator = null;
+
+// Canvas setup
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  W = Math.floor(rect.width);
+  H = Math.max(240, Math.floor(W * 0.42));
+  canvas.width = W;
+  canvas.height = H;
+  canvas.style.height = H + 'px';
+  clampListeners();
+}
+
+// Speaker position (left center)
+function spkX() { return Math.floor(W * 0.07); }
+function spkY() { return Math.floor(H * 0.5); }
+
+// Listeners
+let listA = { x: 0, y: 0 };
+let listB = { x: 0, y: 0 };
+function resetPositions() {
+  listA.x = Math.floor(W * 0.45);
+  listA.y = Math.floor(H * 0.35);
+  listB.x = Math.floor(W * 0.75);
+  listB.y = Math.floor(H * 0.65);
+}
+
+function clampListeners() {
+  const margin = 30;
+  listA.x = Math.max(spkX() + 30, Math.min(W - margin, listA.x));
+  listA.y = Math.max(margin, Math.min(H - margin, listA.y));
+  listB.x = Math.max(spkX() + 30, Math.min(W - margin, listB.x));
+  listB.y = Math.max(margin, Math.min(H - margin, listB.y));
+}
+
+// Pixels to meters (scale: max display ~50m over canvas width minus speaker zone)
+function pxToM(px) {
+  const usableW = W - spkX();
+  return Math.max(0.5, (px / usableW) * 50);
+}
+function mToPx(m) {
+  const usableW = W - spkX();
+  return (m / 50) * usableW;
+}
+
+function dist(ax, ay, bx, by) {
+  return Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2);
+}
+function R1px() { return dist(listA.x, listA.y, spkX(), spkY()); }
+function R2px() { return dist(listB.x, listB.y, spkX(), spkY()); }
+function R1m() { return pxToM(R1px()); }
+function R2m() { return pxToM(R2px()); }
+
+// Drag
+let dragging = null;
+const HIT = 22;
+
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX - r.left, y: t.clientY - r.top };
+}
+
+canvas.addEventListener('mousedown', e => {
+  const p = getPos(e);
+  if (dist(p.x, p.y, listA.x, listA.y) < HIT) dragging = 'A';
+  else if (dist(p.x, p.y, listB.x, listB.y) < HIT) dragging = 'B';
+});
+canvas.addEventListener('touchstart', e => {
+  const p = getPos(e);
+  if (dist(p.x, p.y, listA.x, listA.y) < HIT) { dragging = 'A'; e.preventDefault(); }
+  else if (dist(p.x, p.y, listB.x, listB.y) < HIT) { dragging = 'B'; e.preventDefault(); }
+}, { passive: false });
+
+function onMove(e) {
+  if (!dragging) return;
+  const p = getPos(e);
+  const margin = 28;
+  const minX = spkX() + 20;
+  const cx = Math.max(minX, Math.min(W - margin, p.x));
+  const cy = Math.max(margin, Math.min(H - margin, p.y));
+
+  if (dragging === 'A') {
+    if (mode === 'varyP') {
+      // Lock R1=R2, move both symmetrically by adjusting both x
+      const newR1px = dist(cx, listA.y, spkX(), spkY());
+      // keep same angle, just update x,y
+      listA.x = cx; listA.y = cy;
+      // sync B to same distance
+      const angle = Math.atan2(listB.y - spkY(), listB.x - spkX());
+      listB.x = Math.round(spkX() + newR1px * Math.cos(angle));
+      listB.y = Math.round(spkY() + newR1px * Math.sin(angle));
+      clampListeners();
+    } else {
+      listA.x = cx; listA.y = cy;
+    }
+  } else {
+    if (mode === 'varyP') {
+      listB.x = cx; listB.y = cy;
+      const newR2px = dist(cx, cy, spkX(), spkY());
+      const angle = Math.atan2(listA.y - spkY(), listA.x - spkX());
+      listA.x = Math.round(spkX() + newR2px * Math.cos(angle));
+      listA.y = Math.round(spkY() + newR2px * Math.sin(angle));
+      clampListeners();
+    } else {
+      listB.x = cx; listB.y = cy;
+    }
+  }
+}
+canvas.addEventListener('mousemove', onMove);
+canvas.addEventListener('touchmove', e => { onMove(e); e.preventDefault(); }, { passive: false });
+canvas.addEventListener('mouseup', () => { dragging = null; });
+canvas.addEventListener('mouseleave', () => { dragging = null; });
+canvas.addEventListener('touchend', () => { dragging = null; });
+
+// ===== Audio =====
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  oscillator = audioCtx.createOscillator();
+  gainNode = audioCtx.createGain();
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  gainNode.gain.setValueAtTime(0.06, audioCtx.currentTime);
+  oscillator.start();
+}
+
+function toggleMute() {
+  initAudio();
+  muted = !muted;
+  gainNode.gain.setValueAtTime(muted ? 0 : 0.06, audioCtx.currentTime);
+  document.getElementById('btnMute').textContent = muted ? '🔊 ເປີດສຽງ' : '🔇 ປິດສຽງ';
+}
+
+// ===== Mode =====
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  if (m === 'varyR') {
+    document.getElementById('btnModeP').classList.add('active');
+    document.getElementById('ctrlPsingle').style.display = '';
+    document.getElementById('ctrlPdual').style.display = 'none';
+    document.getElementById('ctrlRlock').style.display = 'none';
+    P1 = P2 = parseFloat(document.getElementById('sliderP').value);
+  } else if (m === 'varyP') {
+    document.getElementById('btnModeR').classList.add('active');
+    document.getElementById('ctrlPsingle').style.display = 'none';
+    document.getElementById('ctrlPdual').style.display = '';
+    document.getElementById('ctrlRlock').style.display = '';
+    // sync R to same
+    const avg = (R1px() + R2px()) / 2;
+    const angle1 = Math.atan2(listA.y - spkY(), listA.x - spkX());
+    const angle2 = Math.atan2(listB.y - spkY(), listB.x - spkX());
+    listA.x = Math.round(spkX() + avg * Math.cos(angle1));
+    listA.y = Math.round(spkY() + avg * Math.sin(angle1));
+    listB.x = Math.round(spkX() + avg * Math.cos(angle2));
+    listB.y = Math.round(spkY() + avg * Math.sin(angle2));
+    document.getElementById('sliderRlock').value = Math.round(pxToM(avg) * 2) / 2;
+    document.getElementById('lblRlock').textContent = pxToM(avg).toFixed(1) + ' m';
+  } else {
+    document.getElementById('btnModeFree').classList.add('active');
+    document.getElementById('ctrlPsingle').style.display = 'none';
+    document.getElementById('ctrlPdual').style.display = '';
+    document.getElementById('ctrlRlock').style.display = 'none';
+  }
+}
+
+function onSliderP() {
+  const v = parseFloat(document.getElementById('sliderP').value);
+  P1 = P2 = v;
+  document.getElementById('lblP').textContent = v.toFixed(1) + ' W';
+}
+function onSliderP1() {
+  P1 = parseFloat(document.getElementById('sliderP1').value);
+  document.getElementById('lblP1').textContent = P1.toFixed(1) + ' W';
+}
+function onSliderP2() {
+  P2 = parseFloat(document.getElementById('sliderP2').value);
+  document.getElementById('lblP2').textContent = P2.toFixed(1) + ' W';
+}
+function onSliderRlock() {
+  const rm = parseFloat(document.getElementById('sliderRlock').value);
+  document.getElementById('lblRlock').textContent = rm.toFixed(1) + ' m';
+  const rpx = mToPx(rm);
+  const angle1 = Math.atan2(listA.y - spkY(), listA.x - spkX());
+  const angle2 = Math.atan2(listB.y - spkY(), listB.x - spkX());
+  listA.x = Math.round(spkX() + rpx * Math.cos(angle1));
+  listA.y = Math.round(spkY() + rpx * Math.sin(angle1));
+  listB.x = Math.round(spkX() + rpx * Math.cos(angle2));
+  listB.y = Math.round(spkY() + rpx * Math.sin(angle2));
+  clampListeners();
+}
+
+function resetAll() {
+  P1 = 10; P2 = 10;
+  document.getElementById('sliderP').value = 10;
+  document.getElementById('sliderP1').value = 10;
+  document.getElementById('sliderP2').value = 20;
+  document.getElementById('lblP').textContent = '10 W';
+  document.getElementById('lblP1').textContent = '10 W';
+  document.getElementById('lblP2').textContent = '20 W';
+  setMode('varyR');
+  resizeCanvas();
+  resetPositions();
+}
+
+// ===== Physics =====
+function calcIntensity(P, Rm) { return P / (4 * Math.PI * Rm * Rm); }
+function calcBeta(I) { return 10 * Math.log10(I / I0); }
+
+// ===== Animation =====
+let wavePhase = 0;
+const NWAVES = 7;
+
+function drawWave(phase) {
+  const sx = spkX(), sy = spkY();
+  const maxR = Math.sqrt(W * W + H * H);
+  for (let i = 0; i < NWAVES; i++) {
+    const frac = ((phase + i / NWAVES) % 1);
+    const r = frac * maxR;
+    const alpha = (1 - frac) * 0.22;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(56,189,248,${alpha})`;
+    ctx.lineWidth = 1.5 + (1 - frac) * 2;
+    ctx.stroke();
+  }
+}
+
+function drawSpeaker() {
+  const sx = spkX(), sy = spkY();
+  // Speaker body
+  ctx.fillStyle = '#1e3a5a';
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(sx - 22, sy - 18, 22, 36, 4);
+  ctx.fill(); ctx.stroke();
+  // Cone
+  ctx.beginPath();
+  ctx.moveTo(sx, sy - 10);
+  ctx.lineTo(sx + 14, sy - 16);
+  ctx.lineTo(sx + 14, sy + 16);
+  ctx.lineTo(sx, sy + 10);
+  ctx.closePath();
+  ctx.fillStyle = '#2a4f70';
+  ctx.fill();
+  ctx.strokeStyle = '#38bdf8';
+  ctx.stroke();
+  // Label
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = `bold ${Math.max(10, W * 0.012)}px Phetsarath OT, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('ລໍາໂພງ', sx - 10, sy + 30);
+}
+
+function drawListener(lx, ly, label, color, beta, R) {
+  const r = 14;
+  // Glow
+  const grd = ctx.createRadialGradient(lx, ly, 0, lx, ly, r * 2.5);
+  grd.addColorStop(0, color + '44');
+  grd.addColorStop(1, 'transparent');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(lx, ly, r * 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Body (person icon)
+  ctx.fillStyle = color;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  // Head
+  ctx.beginPath();
+  ctx.arc(lx, ly - r * 0.5, r * 0.45, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  // Body
+  ctx.beginPath();
+  ctx.ellipse(lx, ly + r * 0.4, r * 0.35, r * 0.55, 0, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  // Label bubble
+  const fs = Math.max(11, W * 0.013);
+  ctx.font = `bold ${fs}px Phetsarath OT, sans-serif`;
+  const bw = ctx.measureText(label).width + 16;
+  const bh = fs + 10;
+  ctx.fillStyle = color + 'dd';
+  ctx.beginPath();
+  ctx.roundRect(lx - bw / 2, ly - r * 2 - bh - 4, bw, bh, 5);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, lx, ly - r * 2 - bh / 2 - 4);
+  ctx.textBaseline = 'alphabetic';
+  // Beta below
+  const bstr = isFinite(beta) ? beta.toFixed(1) + ' dB' : '—';
+  ctx.font = `${Math.max(9, W * 0.011)}px Phetsarath OT, monospace`;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText(bstr, lx, ly + r * 2 + 14);
+  // R value
+  const rstr = R.toFixed(1) + ' m';
+  ctx.fillStyle = '#a0bce0';
+  ctx.fillText(rstr, lx, ly + r * 2 + 26);
+}
+
+function drawDistanceLine(sx, sy, lx, ly, R, color, label) {
+  ctx.save();
+  ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = color + '88';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(lx, ly);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // Midpoint label
+  const mx = (sx + lx) / 2, my = (sy + ly) / 2;
+  const angle = Math.atan2(ly - sy, lx - sx);
+  ctx.save();
+  ctx.translate(mx, my);
+  ctx.rotate(angle);
+  const fs = Math.max(10, W * 0.011);
+  ctx.font = `bold ${fs}px Phetsarath OT, monospace`;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(label + ' = ' + R.toFixed(1) + ' m', 0, -4);
+  ctx.restore();
+  ctx.restore();
+}
+
+function updateUI(r1, r2, i1, i2, b1, b2) {
+  document.getElementById('valR1').textContent = r1.toFixed(2) + ' m';
+  document.getElementById('valR2').textContent = r2.toFixed(2) + ' m';
+  document.getElementById('valP1').textContent = P1.toFixed(2) + ' W';
+  document.getElementById('valP2').textContent = P2.toFixed(2) + ' W';
+  document.getElementById('valI1').textContent = i1.toExponential(3) + ' W/m²';
+  document.getElementById('valI2').textContent = i2.toExponential(3) + ' W/m²';
+  document.getElementById('valB1').textContent = b1.toFixed(2) + ' dB';
+  document.getElementById('valB2').textContent = b2.toFixed(2) + ' dB';
+  const diff = Math.abs(b2 - b1);
+  document.getElementById('valDiff').textContent = diff.toFixed(1);
+
+  // Formula detail
+  let detail = '';
+  if (Math.abs(P1 - P2) < 0.001 && mode === 'varyR') {
+    detail = `= 20 × log₁₀(R₁/R₂) = 20 × log₁₀(${r1.toFixed(1)}/${r2.toFixed(1)})`;
+  } else {
+    detail = `= 10 × log₁₀(${i2.toExponential(2)} / ${i1.toExponential(2)})`;
+  }
+  document.getElementById('formulaDetail').textContent = detail;
+}
+
+let lastTime = 0;
+function animate(ts) {
+  const dt = (ts - lastTime) / 1000;
+  lastTime = ts;
+  wavePhase = (wavePhase + dt * 0.45) % 1;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background gradient
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#0a0e1a');
+  bg.addColorStop(1, '#0e1525');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Waves
+  drawWave(wavePhase);
+
+  const r1m = R1m(), r2m = R2m();
+  const i1 = calcIntensity(P1, r1m);
+  const i2 = calcIntensity(P2, r2m);
+  const b1 = calcBeta(i1);
+  const b2 = calcBeta(i2);
+
+  // Distance lines
+  drawDistanceLine(spkX(), spkY(), listA.x, listA.y, r1m, '#38bdf8', 'R₁');
+  drawDistanceLine(spkX(), spkY(), listB.x, listB.y, r2m, '#fb923c', 'R₂');
+
+  // Speaker
+  drawSpeaker();
+
+  // Listeners
+  drawListener(listA.x, listA.y, 'ຜູ້ຟັງ A', '#38bdf8', b1, r1m);
+  drawListener(listB.x, listB.y, 'ຜູ້ຟັງ B', '#fb923c', b2, r2m);
+
+  // Update UI
+  updateUI(r1m, r2m, i1, i2, b1, b2);
+
+  requestAnimationFrame(animate);
+}
+
+// Init
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  clampListeners();
+});
+
+resizeCanvas();
+resetPositions();
+requestAnimationFrame(ts => { lastTime = ts; animate(ts); });
+</script>
+</body>
+</html>

@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ປະກົດການດົບເລີ - Doppler Effect</title>
+<link href="https://fonts.googleapis.com/css2?family=Phetsarath+OT&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0e1a;--panel:#111827;--card:#1a2235;--border:#2a3a55;
+  --accent:#3b82f6;--accent2:#06b6d4;--green:#22c55e;--red:#ef4444;
+  --yellow:#f59e0b;--text:#e2e8f0;--muted:#64748b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);
+  font-family:'Phetsarath OT','Noto Sans Lao',sans-serif;
+  display:flex;flex-direction:column;}
+header{background:linear-gradient(135deg,#0f172a,#1e3a5f);
+  border-bottom:1px solid var(--border);
+  padding:10px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
+.hico{font-size:1.7rem}
+header h1{font-size:1.2rem;color:var(--accent2)}
+header p{font-size:0.75rem;color:var(--muted);margin-top:1px}
+.layout{display:grid;grid-template-columns:1fr 310px;flex:1;min-height:0;overflow:hidden;}
+.left{display:flex;flex-direction:column;padding:12px;gap:10px;min-height:0;overflow:hidden;}
+#simCanvas{flex:1;min-height:0;display:block;width:100%;
+  border:1px solid var(--border);border-radius:12px;
+  background:#060d1c;cursor:default;}
+.fbox{flex-shrink:0;background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:10px 16px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.fmath{flex:1;font-size:0.82rem;color:var(--accent2);
+  font-family:'Courier New',monospace;word-break:break-all;}
+.fobox{display:flex;flex-direction:column;align-items:center;
+  background:var(--panel);border-radius:8px;padding:6px 16px;min-width:128px;
+  border:2px solid transparent;transition:border-color .2s;}
+.fobox .lbl{font-size:0.7rem;color:var(--muted)}
+.fobox .num{font-size:1.9rem;font-weight:700;
+  font-family:'Courier New',monospace;transition:color .2s;}
+.fobox .unt{font-size:0.7rem;color:var(--muted)}
+.right{background:var(--panel);border-left:1px solid var(--border);
+  overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:12px;}
+.stitle{font-size:0.7rem;color:var(--accent);text-transform:uppercase;
+  letter-spacing:.1em;border-bottom:1px solid var(--border);
+  padding-bottom:5px;margin-bottom:7px;}
+.sl-item{display:flex;flex-direction:column;gap:3px;margin-bottom:7px}
+.sl-item:last-child{margin-bottom:0}
+.sl-head{display:flex;justify-content:space-between;align-items:center}
+.sl-name{font-size:0.8rem;color:var(--text)}
+.sl-val{font-size:0.82rem;color:var(--accent2);
+  font-family:'Courier New',monospace;min-width:70px;text-align:right}
+input[type=range]{width:100%;height:5px;-webkit-appearance:none;appearance:none;
+  background:var(--border);border-radius:3px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;
+  width:15px;height:15px;border-radius:50%;
+  background:var(--accent);border:2px solid #fff;cursor:pointer;}
+.dgrid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.dgrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.dbtn{background:var(--card);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:7px 4px;
+  font-family:'Phetsarath OT',sans-serif;font-size:0.76rem;
+  cursor:pointer;text-align:center;transition:all .15s;line-height:1.3;}
+.dbtn:hover{background:var(--border)}
+.dbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.abtn{width:100%;padding:9px 12px;border-radius:8px;border:none;
+  font-family:'Phetsarath OT',sans-serif;font-size:0.85rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  gap:8px;transition:all .15s;font-weight:600;margin-bottom:6px;}
+.abtn-blue{background:var(--accent);color:#fff}.abtn-blue:hover{background:#2563eb}
+.abtn-amber{background:#78350f;color:#fef3c7;border:1px solid var(--yellow)}
+.abtn-amber.on{background:#d97706;color:#000}
+.abtn-green{background:#14532d;color:#bbf7d0;border:1px solid var(--green)}
+.abtn-green.on{background:#16a34a;color:#fff}
+.abtn-red{background:#7f1d1d;color:#fecaca;border:1px solid var(--red)}
+.abtn-red:hover{background:#991b1b}
+.icard{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+.irow{display:flex;justify-content:space-between;font-size:0.78rem;
+  padding:3px 0;border-bottom:1px solid var(--border)}
+.irow:last-child{border-bottom:none}
+.irow .lbl{color:var(--muted)}
+.irow .val{color:var(--accent2);font-family:'Courier New',monospace}
+.fo-badge{font-size:0.72rem;text-align:center;padding:5px 8px;
+  border-radius:5px;margin-top:6px;font-weight:600;display:none;}
+.fo-badge.show{display:block}
+.fo-up{background:#14532d;color:#86efac;border:1px solid var(--green)}
+.fo-down{background:#7f1d1d;color:#fca5a5;border:1px solid var(--red)}
+.shock{display:none;background:#450a0a;border:1px solid var(--red);
+  border-radius:6px;padding:5px 9px;font-size:0.76rem;color:#fca5a5;
+  text-align:center;margin-top:6px;}
+.shock.show{display:block;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+.obs-hint{font-size:0.7rem;color:var(--muted);text-align:center;margin-top:5px;
+  min-height:18px;}
+.legend{font-size:0.76rem;color:var(--muted);line-height:1.9}
+</style>
+</head>
+<body>
+<header>
+  <div class="hico">🚑</div>
+  <div>
+    <h1>ປະກົດການດົບເລີ ຂອງຄື້ນສຽງ</h1>
+    <p>Doppler Effect for Sound Waves — Interactive Physics Simulation</p>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="left">
+    <canvas id="simCanvas"></canvas>
+    <div class="fbox">
+      <div class="fmath" id="fmTxt">f_o = f_s x (v +/- v_o) / (v -/+ v_s)</div>
+      <div class="fobox" id="foBox">
+        <div class="lbl">ຄວາມຖີ່ໄດ້ຍິນ (f_o)</div>
+        <div class="num" id="foNum">440.0</div>
+        <div class="unt">Hz</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <!-- STATUS -->
+    <div>
+      <div class="stitle">📊 ສະຖານະ</div>
+      <div class="icard">
+        <div class="irow"><span class="lbl">f_s (ຕົ້ນ)</span><span class="val" id="i-fs">440 Hz</span></div>
+        <div class="irow"><span class="lbl">f_o (ໄດ້ຍິນ)</span><span class="val" id="i-fo">440.0 Hz</span></div>
+        <div class="irow"><span class="lbl">v_s (ລົດ)</span><span class="val" id="i-vs">0 m/s</span></div>
+        <div class="irow"><span class="lbl">v_o (ຜູ້ຟັງ)</span><span class="val" id="i-vo">0 m/s</span></div>
+        <div class="irow"><span class="lbl">v (ສຽງ)</span><span class="val" id="i-v">343 m/s</span></div>
+        <div class="irow"><span class="lbl">Doppler</span><span class="val" id="i-dop">—</span></div>
+      </div>
+      <div class="fo-badge" id="foBadge"></div>
+      <div class="shock"    id="shockBadge">⚠ Mach >= 1 — Shock Wave!</div>
+    </div>
+
+    <!-- SLIDERS -->
+    <div>
+      <div class="stitle">🎛 ປັບຄ່າ</div>
+      <div class="sl-item">
+        <div class="sl-head">
+          <span class="sl-name">🚑 ຄວາມໄວລົດ v_s</span>
+          <span class="sl-val" id="d-vs">0 m/s</span>
+        </div>
+        <input type="range" id="sl-vs" min="0" max="380" value="0" step="1">
+      </div>
+      <div class="sl-item">
+        <div class="sl-head">
+          <span class="sl-name">🚶 ຄວາມໄວຜູ້ຟັງ v_o</span>
+          <span class="sl-val" id="d-vo">0 m/s</span>
+        </div>
+        <input type="range" id="sl-vo" min="0" max="40" value="0" step="1">
+      </div>
+      <div class="sl-item">
+        <div class="sl-head">
+          <span class="sl-name">🎵 ຄວາມຖີ່ f_s</span>
+          <span class="sl-val" id="d-fs">440 Hz</span>
+        </div>
+        <input type="range" id="sl-fs" min="80" max="1200" value="440" step="5">
+      </div>
+      <div class="sl-item">
+        <div class="sl-head">
+          <span class="sl-name">🌀 ຄວາມໄວສຽງ v</span>
+          <span class="sl-val" id="d-v">343 m/s</span>
+        </div>
+        <input type="range" id="sl-v" min="100" max="500" value="343" step="1">
+      </div>
+    </div>
+
+    <!-- DIRECTION -->
+    <div>
+      <div class="stitle">🔀 ທິດທາງລົດ</div>
+      <div class="dgrid2" style="margin-bottom:8px">
+        <button class="dbtn on" id="btn-sin"  onclick="setSrcDir('in')">🚑 ເຂົ້າຫາ →</button>
+        <button class="dbtn"    id="btn-sout" onclick="setSrcDir('out')">← ອອກຫ່າງ 🚑</button>
+      </div>
+
+      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:4px">
+        ທິດທາງຜູ້ຟັງ (v_o ຕ້ອງ > 0):
+      </div>
+      <div class="dgrid3">
+        <button class="dbtn"    id="btn-oin"   onclick="setObsDir('in')">🚶 ຫາລົດ</button>
+        <button class="dbtn on" id="btn-onone" onclick="setObsDir('none')">🧍 ຢືນ</button>
+        <button class="dbtn"    id="btn-oout"  onclick="setObsDir('out')">ຫ່າງ 🚶</button>
+      </div>
+      <div class="obs-hint" id="obsHint">ຜູ້ຟັງຢືນຢູ່ກັບທີ່</div>
+    </div>
+
+    <!-- BUTTONS -->
+    <div>
+      <div class="stitle">🕹 ຄວບຄຸມ</div>
+      <button class="abtn abtn-blue"  id="btn-play"  onclick="togglePlay()">⏸ ຢຸດ</button>
+      <button class="abtn abtn-amber" id="btn-slow"  onclick="toggleSlow()">🐢 Slow Motion</button>
+      <button class="abtn abtn-green" id="btn-audio" onclick="toggleAudio()">🔊 ເປີດສຽງ</button>
+      <button class="abtn abtn-red"                  onclick="doReset()">🔄 ເລີ່ມໃໝ່</button>
+    </div>
+
+    <!-- LEGEND -->
+    <div>
+      <div class="stitle">📖 ຄຳອະທິບາຍ</div>
+      <div class="icard">
+        <div class="legend">
+          <div style="color:#4f8ef7">● ວົງຄື້ນໜ້າ = ຖີ່ / ສຽງແຫຼມ</div>
+          <div style="color:#fb923c">● ວົງຄື້ນຫຼັງ = ຫ່າງ / ສຽງທຸ້ມ</div>
+          <div style="color:#22c55e">▲ ສີຂຽວ = ລົດເຂົ້າຫາ (f_o ສູງ)</div>
+          <div style="color:#ef4444">▼ ສີແດງ = ລົດຜ່ານໄປ (f_o ຕ່ຳ)</div>
+          <div style="margin-top:4px">🟡 ລາກ 🧍 ຍ້າຍຜູ້ຟັງໄດ້</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  GLOBALS
+// ═══════════════════════════════════════════════════════════════
+var cv  = document.getElementById('simCanvas');
+var ctx = cv.getContext('2d');
+
+// ── Physics parameters (raw, user-set) ──
+var P = { vs:0, vo:0, fs:440, v:343 };
+
+// ── Simulation state ──
+var playing  = true;
+var slowMode = false;
+var audioOn  = false;
+
+// Car direction button choice: 'in' = moves RIGHT, 'out' = moves LEFT
+var srcDirChoice = 'in';
+
+// Observer movement: 'in' = toward car, 'none' = stationary, 'out' = away from car
+var obsMode = 'none';
+
+// ── Positions ──
+var carX = -90;          // pixels
+var carY = 200;          // pixels (set in resize)
+var obsX = 0.72;         // fraction of canvas width [0..1]
+
+// ── Wave list ──
+var waves    = [];
+var simMs    = 0;
+var lastEmit = 0;
+var lastTS   = null;
+
+// ── Drag ──
+var dragging = false;
+var dragOff  = 0;
+
+// ── Audio ──
+var aCtx     = null;
+var osc      = null;
+var gainNode = null;
+
+// ── Visual constants ──
+// VSND_PX: how fast wavefronts expand in pixels/sec (visual scale for v=343)
+var VSND_PX = 150;
+// EMIT_K: multiply 1/f_s period to space waves visually
+var EMIT_K  = 7;
+
+// ═══════════════════════════════════════════════════════════════
+//  RESIZE
+// ═══════════════════════════════════════════════════════════════
+function resize() {
+  var wrap = cv.parentElement;
+  var wr   = wrap.getBoundingClientRect();
+  cv.width  = Math.floor(wr.width  - 24);
+  cv.height = Math.max(180, Math.floor(wr.height - 24 - 72));
+  carY = cv.height * 0.52;
+}
+window.addEventListener('resize', function(){ resize(); waves=[]; });
+resize();
+
+// ═══════════════════════════════════════════════════════════════
+//  PHYSICS
+//  ─────────────────────────────────────────────────────────────
+//  Standard Doppler:
+//    f_o = f_s * (v + v_o_signed) / (v - v_s_signed)
+//
+//  v_s_signed > 0  when source APPROACHES observer
+//  v_o_signed > 0  when observer APPROACHES source
+//
+//  We determine approach/recede from REAL-TIME positions:
+//    carX vs obsPixX
+//  This means f_o changes automatically when the car passes
+//  the observer — no button needed.
+// ═══════════════════════════════════════════════════════════════
+function getCarDir() {
+  // +1 = moving right, -1 = moving left
+  return (srcDirChoice === 'in') ? 1 : -1;
+}
+
+function srcIsApproaching() {
+  // Car approaches observer when car moves toward observer's x position
+  var obsPixX = obsX * cv.width;
+  var dir     = getCarDir();
+  return (dir > 0) ? (obsPixX > carX) : (obsPixX < carX);
+}
+
+function calcFo() {
+  var vs = P.vs, vo = P.vo, fs = P.fs, v = P.v;
+  if (vs >= v) return null; // shock wave — formula breaks down
+
+  // v_s contribution: positive when car approaches obs
+  var vs_signed = srcIsApproaching() ? vs : -vs;
+
+  // v_o contribution:
+  //   'in'  (toward car)  = observer approaches source  → +vo
+  //   'out' (away from car) = observer recedes source   → -vo
+  //   'none'                                            →  0
+  var vo_signed;
+  if (obsMode === 'none') {
+    vo_signed = 0;
+  } else if (obsMode === 'in') {
+    vo_signed = vo;   // approaching source
+  } else {
+    vo_signed = -vo;  // receding from source
+  }
+
+  var denom = v - vs_signed;
+  if (denom <= 0) return null; // avoids div-by-zero near Mach 1
+
+  return Math.max(0, fs * (v + vo_signed) / denom);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DRAW — Background
+// ═══════════════════════════════════════════════════════════════
+function drawBG() {
+  var W = cv.width, H = cv.height;
+  var rT = H * 0.40, rB = H * 0.63;
+
+  ctx.fillStyle = '#060d1c';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  var st = [[0.08,0.10],[0.22,0.16],[0.36,0.06],[0.50,0.22],
+            [0.64,0.09],[0.78,0.18],[0.91,0.07],[0.14,0.30],
+            [0.57,0.26],[0.83,0.32]];
+  for (var i=0;i<st.length;i++){
+    ctx.beginPath();ctx.arc(st[i][0]*W,st[i][1]*rT,1,0,Math.PI*2);ctx.fill();
+  }
+
+  // Ground
+  ctx.fillStyle='#0c1520'; ctx.fillRect(0,rB,W,H-rB);
+  // Road
+  ctx.fillStyle='#162030'; ctx.fillRect(0,rT,W,rB-rT);
+  // Edges
+  ctx.strokeStyle='rgba(255,255,255,0.13)'; ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(0,rT);ctx.lineTo(W,rT);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,rB);ctx.lineTo(W,rB);ctx.stroke();
+  // Center dash
+  ctx.strokeStyle='rgba(251,191,36,0.30)'; ctx.lineWidth=1.5;
+  ctx.setLineDash([20,14]);
+  ctx.beginPath();ctx.moveTo(0,(rT+rB)/2);ctx.lineTo(W,(rT+rB)/2);ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DRAW — Wavefronts / Mach cone
+// ═══════════════════════════════════════════════════════════════
+function drawWaves() {
+  if (P.vs >= P.v) {
+    // ── Mach cone ──
+    var mach  = Math.max(P.vs/P.v, 1.001);
+    var angle = Math.asin(1/mach);
+    var dir   = getCarDir();
+    var L = cv.width * 1.5;
+    var hw = L * Math.tan(angle);
+    var bx = carX - dir*L;
+    ctx.save();
+    var g = ctx.createLinearGradient(carX,carY,bx,carY);
+    g.addColorStop(0,'rgba(239,68,68,0.42)');
+    g.addColorStop(1,'rgba(239,68,68,0)');
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    ctx.moveTo(carX,carY);
+    ctx.lineTo(bx,carY-hw);
+    ctx.lineTo(bx,carY+hw);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(239,68,68,0.80)'; ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.moveTo(carX,carY);ctx.lineTo(bx,carY-hw);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(carX,carY);ctx.lineTo(bx,carY+hw);ctx.stroke();
+    ctx.restore();
+    return;
+  }
+  var dir = getCarDir();
+  for (var i=0;i<waves.length;i++) {
+    var w = waves[i];
+    if (w.r<=0||w.r>w.maxR) continue;
+    // Front = car already passed the birth point
+    var isFront = (dir>0) ? (w.cx < carX) : (w.cx > carX);
+    var a = Math.max(0, 0.70*(1 - w.r/w.maxR));
+    ctx.beginPath();
+    ctx.arc(w.cx, w.cy, w.r, 0, Math.PI*2);
+    ctx.strokeStyle = isFront
+      ? 'rgba(79,142,247,'+a+')'
+      : 'rgba(251,146,60,'+a+')';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DRAW — Ambulance  (pure canvas, no roundRect API)
+// ═══════════════════════════════════════════════════════════════
+function rrect(c,x,y,w,h,r){
+  c.beginPath();
+  c.moveTo(x+r,y);
+  c.lineTo(x+w-r,y); c.quadraticCurveTo(x+w,y,x+w,y+r);
+  c.lineTo(x+w,y+h-r); c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  c.lineTo(x+r,y+h); c.quadraticCurveTo(x,y+h,x,y+h-r);
+  c.lineTo(x,y+r); c.quadraticCurveTo(x,y,x+r,y);
+  c.closePath();
+}
+
+function drawCar(){
+  ctx.save();
+  ctx.translate(carX, carY);
+  if (srcDirChoice === 'out') ctx.scale(-1,1);
+
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,0.28)';
+  ctx.beginPath(); ctx.ellipse(0,13,26,5,0,0,Math.PI*2); ctx.fill();
+
+  // body
+  ctx.fillStyle='#b91c1c'; rrect(ctx,-26,-12,52,21,4); ctx.fill();
+  ctx.fillStyle='#dc2626'; rrect(ctx,-26,-12,52,10,4); ctx.fill();
+  // cab
+  ctx.fillStyle='#991b1b'; rrect(ctx,-7,-23,28,13,3); ctx.fill();
+  // window
+  ctx.fillStyle='rgba(186,230,253,0.90)'; ctx.fillRect(-3,-21,20,9);
+  // stripe
+  ctx.fillStyle='rgba(255,255,255,0.14)'; ctx.fillRect(-26,-2,52,4);
+
+  // wheels
+  var wp=[[-17,9],[15,9]];
+  for(var i=0;i<2;i++){
+    ctx.fillStyle='#0f172a';
+    ctx.beginPath();ctx.arc(wp[i][0],wp[i][1],6,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#475569';ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.arc(wp[i][0],wp[i][1],6,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='#1e293b';
+    ctx.beginPath();ctx.arc(wp[i][0],wp[i][1],2.5,0,Math.PI*2);ctx.fill();
+  }
+
+  // siren flash
+  var t = Math.floor(Date.now()/350)%2;
+  ctx.fillStyle=(t===0)?'#ef4444':'#3b82f6'; ctx.fillRect(-4,-29,7,6);
+  ctx.fillStyle=(t===0)?'#3b82f6':'#ef4444'; ctx.fillRect( 6,-29,7,6);
+
+  // cross
+  ctx.strokeStyle='#ffffff'; ctx.lineWidth=2.2;
+  ctx.beginPath();ctx.moveTo(-3,-3);ctx.lineTo(3,-3);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(0,1);ctx.stroke();
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DRAW — Observer
+// ═══════════════════════════════════════════════════════════════
+function drawObserver(){
+  var ox  = obsX * cv.width;
+  var oy  = carY;
+  var fo  = calcFo();
+  var app = srcIsApproaching();
+
+  ctx.save();
+  ctx.translate(ox, oy-28);
+
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,0.22)';
+  ctx.beginPath();ctx.ellipse(0,22,9,3,0,0,Math.PI*2);ctx.fill();
+
+  // head
+  ctx.fillStyle='#fbbf24';
+  ctx.beginPath();ctx.arc(0,-16,7,0,Math.PI*2);ctx.fill();
+  // eyes
+  ctx.fillStyle='#0f172a';
+  ctx.beginPath();ctx.arc(-2.5,-17,1.2,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(2.5,-17,1.2,0,Math.PI*2);ctx.fill();
+
+  // body
+  ctx.strokeStyle='#fbbf24'; ctx.lineWidth=2.2;
+  ctx.beginPath();ctx.moveTo(0,-9);ctx.lineTo(0,8);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-9,-1);ctx.lineTo(9,-1);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,8);ctx.lineTo(-7,22);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,8);ctx.lineTo(7,22);ctx.stroke();
+
+  // sound arcs — green = car approaching, red = car receding
+  if (fo!==null && playing) {
+    var col = app ? 'rgba(52,211,153,' : 'rgba(248,113,113,';
+    for(var i=1;i<=3;i++){
+      ctx.strokeStyle = col+(0.75-i*0.17)+')';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(11,-9,i*6.5,-0.65,0.65);
+      ctx.stroke();
+    }
+  }
+
+  // movement arrow above head
+  if (obsMode !== 'none' && P.vo > 0) {
+    var obsPixX = ox;
+    var carOnRight = (carX > obsPixX);
+    var arrowTxt;
+    if (obsMode === 'in') {
+      arrowTxt = carOnRight ? '→' : '←';
+    } else {
+      arrowTxt = carOnRight ? '←' : '→';
+    }
+    ctx.font = "14px sans-serif";
+    ctx.fillStyle = 'rgba(251,191,36,0.9)';
+    ctx.textAlign = 'center';
+    ctx.fillText(arrowTxt, 0, -30);
+  }
+
+  ctx.restore();
+
+  ctx.fillStyle='#fbbf24';
+  ctx.font = "12px 'Phetsarath OT',sans-serif";
+  ctx.textAlign='center';
+  ctx.fillText('ຜູ້ຟັງ', ox, oy-60);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UPDATE DOM  +  AUDIO
+// ═══════════════════════════════════════════════════════════════
+function updateDOM(){
+  var fo    = calcFo();
+  var shock = (P.vs >= P.v);
+  var app   = srcIsApproaching();
+
+  // ── Big f_o number ──
+  var numEl = document.getElementById('foNum');
+  var boxEl = document.getElementById('foBox');
+  if (shock) {
+    numEl.textContent = 'inf';
+    numEl.style.color = '#ef4444';
+    boxEl.style.borderColor = '#ef4444';
+  } else if (fo !== null) {
+    numEl.textContent = fo.toFixed(1);
+    numEl.style.color = app ? '#22c55e' : '#ef4444';
+    boxEl.style.borderColor = app ? '#22c55e' : '#ef4444';
+  }
+
+  // ── Formula display ──
+  var voEff  = (obsMode==='none') ? 0 : P.vo;
+  var signO  = (obsMode==='out')  ? '-' : '+';
+  // signS in denominator: approaching → v - vs, receding → v + vs
+  var signS  = app ? '-' : '+';
+  var foStr  = shock ? 'inf' : (fo!==null ? fo.toFixed(1) : '---');
+  document.getElementById('fmTxt').textContent =
+    'f_o = '+P.fs+' x ('+P.v+' '+signO+' '+voEff+') / ('+P.v+' '+signS+' '+P.vs+') = '+foStr+' Hz';
+
+  // ── Status rows ──
+  document.getElementById('i-fs').textContent = P.fs+' Hz';
+  document.getElementById('i-fo').textContent = shock?'inf Hz':(fo!==null?fo.toFixed(1):'---')+' Hz';
+  document.getElementById('i-vs').textContent = P.vs+' m/s';
+  document.getElementById('i-vo').textContent = P.vo+' m/s';
+  document.getElementById('i-v').textContent  = P.v +' m/s';
+
+  var dopEl = document.getElementById('i-dop');
+  if (shock) {
+    dopEl.textContent = 'Shock Wave!'; dopEl.style.color='#ef4444';
+  } else if (app) {
+    dopEl.textContent = 'up  ສຽງແຫຼມ'; dopEl.style.color='#22c55e';
+  } else {
+    dopEl.textContent = 'down ສຽງທຸ້ມ'; dopEl.style.color='#f87171';
+  }
+
+  // ── Badge ──
+  var bd = document.getElementById('foBadge');
+  if (!shock && fo!==null) {
+    if (app) {
+      bd.textContent='🔺 ສຽງແຫຼມ — ລົດກຳລັງເຂົ້າຫາ (f_o = '+fo.toFixed(0)+' Hz)';
+      bd.className='fo-badge show fo-up';
+    } else {
+      bd.textContent='🔻 ສຽງທຸ້ມ — ລົດຜ່ານໄປແລ້ວ (f_o = '+fo.toFixed(0)+' Hz)';
+      bd.className='fo-badge show fo-down';
+    }
+  } else {
+    bd.className='fo-badge';
+  }
+
+  // ── Shock badge ──
+  document.getElementById('shockBadge').className = shock?'shock show':'shock';
+
+  // ── Observer hint ──
+  var hint = document.getElementById('obsHint');
+  if (obsMode==='none' || P.vo===0) {
+    hint.textContent = 'ຜູ້ຟັງຢືນຢູ່ກັບທີ່';
+    hint.style.color = 'var(--muted)';
+  } else if (obsMode==='in') {
+    hint.textContent = 'ຜູ້ຟັງ: ກຳລັງຍ້າຍໄປຫາລົດ ('+P.vo+' m/s)';
+    hint.style.color = '#22c55e';
+  } else {
+    hint.textContent = 'ຜູ້ຟັງ: ກຳລັງຍ້າຍອອກຫ່າງ ('+P.vo+' m/s)';
+    hint.style.color = '#f87171';
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  AUDIO — update pitch EVERY FRAME
+  //  This is the fix: we continuously call setTargetAtTime
+  //  with the current f_o so the pitch follows the car.
+  //  Time constant 0.04s = fast enough to feel real-time
+  //  but smooth enough to avoid clicks.
+  // ══════════════════════════════════════════════════════
+  if (aCtx && osc) {
+    if (!shock && fo !== null && fo > 0) {
+      var target = Math.min(Math.max(fo, 20), 6000);
+      osc.frequency.setTargetAtTime(target, aCtx.currentTime, 0.04);
+    } else if (shock) {
+      // Shock wave — ramp gain to 0 so no tone during shock
+      if (gainNode) gainNode.gain.setTargetAtTime(0, aCtx.currentTime, 0.05);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SIMULATION UPDATE  (called each frame when playing)
+// ═══════════════════════════════════════════════════════════════
+function update(dt) {
+  var sp  = slowMode ? 0.18 : 1.0;
+  var dtA = dt * sp;  // adjusted delta time
+
+  // ── Move car ──
+  var dir   = getCarDir();
+  // Car pixel speed proportional to vs/v * visual_sound_speed
+  var carPxPerSec = (P.vs / Math.max(P.v, 1)) * VSND_PX;
+  carX += dir * carPxPerSec * dtA / 1000;
+  // Wrap around canvas
+  if (dir > 0 && carX >  cv.width + 90) carX = -90;
+  if (dir < 0 && carX < -90)            carX = cv.width + 90;
+
+  // ── Move observer ──
+  // Only move when obsMode is active AND vo > 0
+  if (obsMode !== 'none' && P.vo > 0) {
+    var obsPixX  = obsX * cv.width;
+    // Determine actual pixel direction:
+    //   'in'  = observer moves TOWARD car
+    //   'out' = observer moves AWAY from car
+    var obsPixDir;
+    if (obsMode === 'in') {
+      // Move toward car — if car is to the right, move right; else move left
+      obsPixDir = (carX > obsPixX) ? 1 : -1;
+    } else {
+      // Move away from car
+      obsPixDir = (carX > obsPixX) ? -1 : 1;
+    }
+    // Observer pixel speed — same proportion as car (vo/v * VSND_PX)
+    // But we keep it visually reasonable (observer is much slower than car)
+    var obsPxPerSec = (P.vo / Math.max(P.v, 1)) * VSND_PX;
+    var deltaX = obsPixDir * obsPxPerSec * dtA / 1000;
+    obsX += deltaX / cv.width;
+    // Clamp to canvas edges
+    obsX = Math.min(Math.max(obsX, 0.04), 0.96);
+  }
+
+  // ── Emit wavefronts ──
+  simMs += dtA;
+  var emitInterval = (1000 / P.fs) * EMIT_K;
+  if (P.vs < P.v && simMs - lastEmit > emitInterval) {
+    lastEmit = simMs;
+    waves.push({ cx: carX, cy: carY, r: 1, maxR: VSND_PX * 3.2 });
+  }
+
+  // ── Expand wavefronts ──
+  // Expand at VSND_PX * sp pixels per second (slow-motion scales it)
+  var expandPerMs = VSND_PX * sp / 1000;
+  for (var i = 0; i < waves.length; i++) {
+    waves[i].r += expandPerMs * dt;
+  }
+
+  // ── Cleanup ──
+  waves = waves.filter(function(w){ return w.r < w.maxR; });
+  if (waves.length > 130) waves.splice(0, waves.length - 130);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MAIN LOOP
+// ═══════════════════════════════════════════════════════════════
+function loop(ts) {
+  if (!lastTS) lastTS = ts;
+  var dt = Math.min(ts - lastTS, 80);
+  lastTS = ts;
+
+  if (playing) update(dt);
+
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  drawBG();
+  drawWaves();
+  drawCar();
+  drawObserver();
+  updateDOM();
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ═══════════════════════════════════════════════════════════════
+//  SLIDERS
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('sl-vs').addEventListener('input', function(e){
+  P.vs = +e.target.value;
+  document.getElementById('d-vs').textContent = P.vs + ' m/s';
+  waves = [];
+});
+document.getElementById('sl-vo').addEventListener('input', function(e){
+  P.vo = +e.target.value;
+  document.getElementById('d-vo').textContent = P.vo + ' m/s';
+  // update hint immediately
+  var hint = document.getElementById('obsHint');
+  if (P.vo === 0) hint.textContent = 'ຜູ້ຟັງຢືນຢູ່ກັບທີ່';
+});
+document.getElementById('sl-fs').addEventListener('input', function(e){
+  P.fs = +e.target.value;
+  document.getElementById('d-fs').textContent = P.fs + ' Hz';
+  waves = [];
+});
+document.getElementById('sl-v').addEventListener('input', function(e){
+  P.v = +e.target.value;
+  document.getElementById('d-v').textContent = P.v + ' m/s';
+  waves = [];
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  DIRECTION BUTTONS
+// ═══════════════════════════════════════════════════════════════
+function setSrcDir(d) {
+  srcDirChoice = d;
+  waves = [];
+  carX = (d === 'in') ? -90 : cv.width + 90;
+  document.getElementById('btn-sin').className  = 'dbtn'+(d==='in' ?' on':'');
+  document.getElementById('btn-sout').className = 'dbtn'+(d==='out'?' on':'');
+}
+
+function setObsDir(d) {
+  obsMode = d;
+  document.getElementById('btn-oin').className   = 'dbtn'+(d==='in'  ?' on':'');
+  document.getElementById('btn-onone').className = 'dbtn'+(d==='none'?' on':'');
+  document.getElementById('btn-oout').className  = 'dbtn'+(d==='out' ?' on':'');
+
+  // ── Immediately reposition observer so button has visible effect ──
+  if (d === 'in') {
+    // Place observer ahead of car so they approach each other
+    // Car goes right → obs should be to the right of center
+    obsX = (srcDirChoice === 'in') ? 0.82 : 0.18;
+  } else if (d === 'out') {
+    // Place observer behind car's path so car moves away
+    obsX = (srcDirChoice === 'in') ? 0.15 : 0.85;
+  }
+  // 'none': keep current position, just stop movement
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ACTION BUTTONS
+// ═══════════════════════════════════════════════════════════════
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('btn-play').textContent = playing ? '⏸ ຢຸດ' : '▶ ເລີ່ມ';
+}
+
+function toggleSlow() {
+  slowMode = !slowMode;
+  var b = document.getElementById('btn-slow');
+  b.className = 'abtn abtn-amber'+(slowMode?' on':'');
+  b.textContent = slowMode ? '🐇 ຄວາມໄວປົກກະຕິ' : '🐢 Slow Motion';
+}
+
+function toggleAudio() {
+  if (!audioOn) {
+    try {
+      aCtx     = new (window.AudioContext || window.webkitAudioContext)();
+      osc      = aCtx.createOscillator();
+      gainNode = aCtx.createGain();
+      osc.type = 'sine';
+
+      // ── Start at the CURRENT f_o (not f_s!) ──
+      var fo0 = calcFo();
+      var startFreq = (fo0 !== null && fo0 > 0) ? fo0 : P.fs;
+      osc.frequency.setValueAtTime(startFreq, aCtx.currentTime);
+
+      // Smooth gain in
+      gainNode.gain.setValueAtTime(0, aCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.10, aCtx.currentTime + 0.06);
+
+      osc.connect(gainNode);
+      gainNode.connect(aCtx.destination);
+      osc.start();
+
+      audioOn = true;
+      document.getElementById('btn-audio').className   = 'abtn abtn-green on';
+      document.getElementById('btn-audio').textContent = '🔇 ປິດສຽງ';
+    } catch(e) {
+      alert('ບໍ່ສາມາດເປີດສຽງໄດ້: ' + e.message);
+    }
+  } else {
+    try {
+      gainNode.gain.setValueAtTime(gainNode.gain.value, aCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0, aCtx.currentTime + 0.06);
+    } catch(x){}
+    var _osc = osc, _gain = gainNode, _ctx = aCtx;
+    osc = null; gainNode = null; aCtx = null;
+    setTimeout(function(){
+      try { _osc.stop(); } catch(x){}
+      try { _osc.disconnect(); _gain.disconnect(); _ctx.close(); } catch(x){}
+    }, 80);
+    audioOn = false;
+    document.getElementById('btn-audio').className   = 'abtn abtn-green';
+    document.getElementById('btn-audio').textContent = '🔊 ເປີດສຽງ';
+  }
+}
+
+function doReset() {
+  if (audioOn) toggleAudio();
+  P.vs=0; P.vo=0; P.fs=440; P.v=343;
+  srcDirChoice='in'; obsMode='none';
+  slowMode=false; playing=true;
+  waves=[]; simMs=0; lastEmit=0;
+  carX=-90; obsX=0.72;
+
+  document.getElementById('sl-vs').value=0;   document.getElementById('d-vs').textContent='0 m/s';
+  document.getElementById('sl-vo').value=0;   document.getElementById('d-vo').textContent='0 m/s';
+  document.getElementById('sl-fs').value=440; document.getElementById('d-fs').textContent='440 Hz';
+  document.getElementById('sl-v').value=343;  document.getElementById('d-v').textContent='343 m/s';
+  document.getElementById('btn-play').textContent='⏸ ຢຸດ';
+  document.getElementById('btn-slow').className='abtn abtn-amber';
+  document.getElementById('btn-slow').textContent='🐢 Slow Motion';
+  document.getElementById('obsHint').textContent='ຜູ້ຟັງຢືນຢູ່ກັບທີ່';
+  setSrcDir('in'); setObsDir('none');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DRAG OBSERVER
+// ═══════════════════════════════════════════════════════════════
+function getXY(e, touch) {
+  var r   = cv.getBoundingClientRect();
+  var src = touch ? e.touches[0] : e;
+  return {
+    x: (src.clientX - r.left) * (cv.width  / r.width),
+    y: (src.clientY - r.top)  * (cv.height / r.height)
+  };
+}
+function hitObs(x, y) {
+  var ox = obsX * cv.width;
+  var oy = carY - 28;
+  return Math.abs(x - ox) < 26 && y >= (oy - 36) && y <= (oy + 32);
+}
+
+cv.addEventListener('mousedown', function(e){
+  var p = getXY(e, false);
+  if (hitObs(p.x, p.y)) {
+    dragging = true;
+    dragOff  = p.x - obsX * cv.width;
+    cv.style.cursor = 'grabbing';
+    // Dragging overrides auto-movement → set to none
+    obsMode = 'none';
+    document.getElementById('btn-oin').className   = 'dbtn';
+    document.getElementById('btn-onone').className = 'dbtn on';
+    document.getElementById('btn-oout').className  = 'dbtn';
+  }
+});
+cv.addEventListener('mousemove', function(e){
+  if (!dragging) return;
+  var p = getXY(e, false);
+  obsX = Math.min(Math.max((p.x - dragOff) / cv.width, 0.04), 0.96);
+});
+cv.addEventListener('mouseup',    function(){ dragging=false; cv.style.cursor='default'; });
+cv.addEventListener('mouseleave', function(){ dragging=false; cv.style.cursor='default'; });
+
+cv.addEventListener('touchstart', function(e){
+  var p = getXY(e, true);
+  if (hitObs(p.x, p.y)) {
+    dragging = true; dragOff = p.x - obsX * cv.width;
+    obsMode = 'none';
+    document.getElementById('btn-onone').className = 'dbtn on';
+    document.getElementById('btn-oin').className   = 'dbtn';
+    document.getElementById('btn-oout').className  = 'dbtn';
+  }
+}, {passive:true});
+cv.addEventListener('touchmove', function(e){
+  if (!dragging) return;
+  var p = getXY(e, true);
+  obsX = Math.min(Math.max((p.x - dragOff) / cv.width, 0.04), 0.96);
+}, {passive:true});
+cv.addEventListener('touchend', function(){ dragging=false; });
+</script>
+</body>
+</html>

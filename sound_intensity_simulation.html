@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ຄວາມເຂັ້ມສຽງ ແລະ ລະດັບຄວາມເຂັ້ມສຽງ</title>
+<link href="https://fonts.googleapis.com/css2?family=Phetsarath+OT&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --orange: #f97316;
+    --red: #ef4444;
+    --wave: rgba(56, 189, 248, 0.6);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Phetsarath OT', 'Noto Sans Lao', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  header h1 {
+    font-size: 1.2rem;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+  header p { font-size: 0.78rem; color: var(--text-muted); }
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    flex: 1;
+    gap: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  /* Canvas area */
+  .sim-area {
+    position: relative;
+    background: radial-gradient(ellipse at 30% 50%, #0d1f3c 0%, #0a0e1a 70%);
+    overflow: hidden;
+    height: 100%;
+  }
+  #simCanvas { display: block; width: 100%; height: 100%; cursor: grab; }
+  #simCanvas:active { cursor: grabbing; }
+  /* Right panel */
+  .panel {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .panel-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-section:last-child { border-bottom: none; }
+  .section-title {
+    font-size: 0.7rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title::before {
+    content: '';
+    width: 3px;
+    height: 12px;
+    background: var(--accent);
+    border-radius: 2px;
+    display: inline-block;
+  }
+  /* Data display */
+  .data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .data-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+  }
+  .data-label { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 4px; }
+  .data-value { font-size: 1.1rem; color: var(--text); font-weight: bold; }
+  .data-unit { font-size: 0.65rem; color: var(--text-muted); margin-left: 2px; }
+  /* dB Gauge */
+  .gauge-wrap { margin: 8px 0; }
+  .gauge-label-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .gauge-bar {
+    height: 14px;
+    border-radius: 7px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+  .gauge-fill {
+    height: 100%;
+    border-radius: 7px;
+    transition: width 0.2s ease, background 0.2s ease;
+    position: relative;
+  }
+  .gauge-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.55rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .db-display {
+    font-size: 2.5rem;
+    font-weight: bold;
+    text-align: center;
+    padding: 8px 0 4px;
+    transition: color 0.3s;
+  }
+  .db-desc {
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    min-height: 1.2em;
+  }
+  /* Warning */
+  .warning-badge {
+    display: none;
+    background: rgba(239,68,68,0.15);
+    border: 1px solid var(--red);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.7rem;
+    color: var(--red);
+    text-align: center;
+    margin-top: 4px;
+  }
+  .warning-badge.show { display: block; }
+  /* Sliders */
+  .slider-group { margin-bottom: 12px; }
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .slider-label { font-size: 0.75rem; color: var(--text); }
+  .slider-val {
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: bold;
+    min-width: 80px;
+    text-align: right;
+  }
+  input[type=range] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: var(--surface2);
+    border-radius: 2px;
+    outline: none;
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 6px rgba(56,189,248,0.5);
+  }
+  /* Presets */
+  .presets-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+  .preset-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: var(--text);
+    font-family: 'Phetsarath OT', sans-serif;
+    font-size: 0.65rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    line-height: 1.4;
+  }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.05); }
+  .preset-btn.active { border-color: var(--accent); background: rgba(56,189,248,0.1); color: var(--accent); }
+  .preset-db { font-weight: bold; display: block; font-size: 0.8rem; }
+  /* Action buttons */
+  .btn-row { display: flex; gap: 8px; }
+  .btn {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'Phetsarath OT', sans-serif;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: bold;
+  }
+  .btn-primary {
+    background: rgba(56,189,248,0.15);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+  .btn-primary:hover { background: rgba(56,189,248,0.25); }
+  .btn-primary.active { background: var(--accent); color: var(--bg); }
+  .btn-ghost {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+  /* Formula box */
+  .formula-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.8;
+  }
+  .formula-box .f { color: var(--accent2); font-style: italic; }
+  .formula-box .eq { color: var(--text); }
+  /* Distance overlay */
+  .dist-label {
+    position: absolute;
+    background: rgba(10,14,26,0.85);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 2px 7px;
+    font-size: 0.7rem;
+    color: var(--accent);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🔊 ຄວາມເຂັ້ມສຽງ ແລະ ລະດັບຄວາມເຂັ້ມສຽງ</h1>
+    <p>ການຈຳລອງ Sound Intensity &amp; Sound Intensity Level · ຟີຊິກສາດ ມ.ປາຍ</p>
+  </div>
+</header>
+
+<div class="main-layout">
+  <div class="sim-area">
+    <canvas id="simCanvas"></canvas>
+    <div class="dist-label" id="distLabel">R = 0.0 m</div>
+  </div>
+
+  <div class="panel">
+    <!-- dB Readout -->
+    <div class="panel-section">
+      <div class="section-title">ຜົນການວັດ</div>
+      <div class="db-display" id="dbDisplay">-- dB</div>
+      <div class="db-desc" id="dbDesc">ເລີ່ມລາກຕົວລະຄອນ</div>
+      <div class="gauge-wrap">
+        <div class="gauge-label-row"><span>0 dB</span><span>85 dB</span><span>140 dB</span></div>
+        <div class="gauge-bar"><div class="gauge-fill" id="gaugeFill" style="width:0%"></div></div>
+        <div class="gauge-ticks"><span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span><span>120</span><span>140</span></div>
+      </div>
+      <div class="warning-badge" id="warningBadge">⚠️ ສຽງດັງເກີນ 85 dB — ອັນຕະລາຍຕໍ່ຫູ!</div>
+      <div class="data-grid" style="margin-top:10px">
+        <div class="data-card">
+          <div class="data-label">ໄລຍະຫ່າງ (R)</div>
+          <div class="data-value"><span id="vR">—</span><span class="data-unit">m</span></div>
+        </div>
+        <div class="data-card">
+          <div class="data-label">ຄວາມເຂັ້ມສຽງ (I)</div>
+          <div class="data-value" id="vI" style="font-size:0.85rem">—</div>
+        </div>
+        <div class="data-card">
+          <div class="data-label">ກຳລັງສຽງ (P)</div>
+          <div class="data-value"><span id="vP">—</span></div>
+        </div>
+        <div class="data-card">
+          <div class="data-label">ຄວາມຖີ່ (f)</div>
+          <div class="data-value"><span id="vF">—</span><span class="data-unit">Hz</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="panel-section">
+      <div class="section-title">ປັບຄ່າ</div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">ກຳລັງສຽງ (P)</span>
+          <span class="slider-val" id="pLabel">0.1 W</span>
+        </div>
+        <input type="range" id="powerSlider" min="-3" max="3" step="0.01" value="-1">
+      </div>
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">ຄວາມຖີ່ (f)</span>
+          <span class="slider-val" id="fLabel">440 Hz</span>
+        </div>
+        <input type="range" id="freqSlider" min="20" max="4000" step="1" value="440">
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="panel-section">
+      <div class="section-title">ສະຖານະການທົ່ວໄປ</div>
+      <div class="presets-grid">
+        <button class="preset-btn" data-db="10" onclick="applyPreset(this)">
+          <span class="preset-db">10 dB</span>ໃບໄມ້ຫຼົ່ນ
+        </button>
+        <button class="preset-btn" data-db="30" onclick="applyPreset(this)">
+          <span class="preset-db">30 dB</span>ຫ້ອງສຽບ
+        </button>
+        <button class="preset-btn" data-db="60" onclick="applyPreset(this)">
+          <span class="preset-db">60 dB</span>ສົນທະນາທຳມະດາ
+        </button>
+        <button class="preset-btn" data-db="80" onclick="applyPreset(this)">
+          <span class="preset-db">80 dB</span>ຈະລາຈອນແອອັດ
+        </button>
+        <button class="preset-btn" data-db="110" onclick="applyPreset(this)">
+          <span class="preset-db">110 dB</span>ສຽງຄອນເສີດ
+        </button>
+        <button class="preset-btn" data-db="130" onclick="applyPreset(this)">
+          <span class="preset-db">130 dB</span>ເຄື່ອງບິນເຈັດ
+        </button>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="panel-section">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="audioBtn" onclick="toggleAudio()">🔇 ເປີດສຽງ</button>
+        <button class="btn btn-ghost" onclick="resetSim()">↺ ເລີ່ມໃໝ່</button>
+      </div>
+    </div>
+
+    <!-- Formula -->
+    <div class="panel-section">
+      <div class="section-title">ສູດຄຳນວນ</div>
+      <div class="formula-box">
+        <div><span class="f">I</span> <span class="eq">= P / (4π R²)</span></div>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-left:8px">ຄວາມເຂັ້ມສຽງ [W/m²]</div>
+        <br>
+        <div><span class="f">β</span> <span class="eq">= 10 × log₁₀(I / I₀)</span></div>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-left:8px">ລະດັບຄວາມເຂັ້ມ [dB]</div>
+        <br>
+        <div><span class="f">I₀</span> <span class="eq">= 10⁻¹² W/m²</span></div>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-left:8px">ຄວາມເຂັ້ມສຽງອ້າງອີງ</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+const distLabel = document.getElementById('distLabel');
+
+// State
+let P = 0.1; // watts
+let freq = 440;
+let listenerX, listenerY;
+let sourceX, sourceY;
+const I0 = 1e-12;
+const SCALE = 50; // pixels per meter
+let waves = [];
+let lastWaveTime = 0;
+let animId;
+let audioEnabled = false;
+let audioCtx = null, oscillator = null, gainNode = null;
+let isDragging = false;
+let presetActive = false;
+
+function resize() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  sourceX = canvas.width * 0.22;
+  sourceY = canvas.height * 0.5;
+  if (!listenerX) {
+    listenerX = canvas.width * 0.6;
+    listenerY = canvas.height * 0.5;
+  }
+}
+
+function getR() {
+  const dx = listenerX - sourceX, dy = listenerY - sourceY;
+  const px = Math.sqrt(dx * dx + dy * dy);
+  return Math.max(px / SCALE, 0.1);
+}
+
+function getI(r) { return P / (4 * Math.PI * r * r); }
+function getDB(I) { return 10 * Math.log10(I / I0); }
+
+function dbColor(db) {
+  if (db < 60) return '#22c55e';
+  if (db < 85) return '#eab308';
+  if (db < 110) return '#f97316';
+  return '#ef4444';
+}
+
+function dbDesc(db) {
+  if (db < 0) return 'ງຽບສະຫງົ່ວ';
+  if (db < 20) return 'ງຽບຫຼາຍ — ຫ້ອງທີ່ງຽບ';
+  if (db < 40) return 'ງຽບ — ສຽງຫ້ອງສຽບ';
+  if (db < 60) return 'ທຳມະດາ — ສົນທະນາ';
+  if (db < 80) return 'ດັງໜ້ອຍ — ຈະລາຈອນ';
+  if (db < 85) return 'ດັງ — ໃຊ້ຕໍ່ເນື່ອງໄດ້';
+  if (db < 100) return '⚠️ ອັນຕະລາຍ — ສຽງດັງເກີນ 85 dB';
+  if (db < 120) return '⚠️ ອັນຕະລາຍ — ສຽງດັງຫຼາຍ';
+  return '🔴 ຮ້າຍແຮງ — ອາດເຈັບຫູທັນທີ';
+}
+
+function updateDisplay() {
+  const r = getR();
+  const I = getI(r);
+  const db = getDB(I);
+  const col = dbColor(db);
+
+  document.getElementById('dbDisplay').textContent = db.toFixed(1) + ' dB';
+  document.getElementById('dbDisplay').style.color = col;
+  document.getElementById('dbDesc').textContent = dbDesc(db);
+  document.getElementById('vR').textContent = r.toFixed(2);
+  document.getElementById('vI').textContent = I.toExponential(2) + ' W/m²';
+  document.getElementById('vP').textContent = formatP(P);
+  document.getElementById('vF').textContent = freq;
+
+  const pct = Math.min(Math.max(db / 140 * 100, 0), 100);
+  const fill = document.getElementById('gaugeFill');
+  fill.style.width = pct + '%';
+  fill.style.background = `linear-gradient(to right, #22c55e, ${col})`;
+
+  const warn = document.getElementById('warningBadge');
+  db > 85 ? warn.classList.add('show') : warn.classList.remove('show');
+
+  distLabel.textContent = 'R = ' + r.toFixed(2) + ' m';
+  distLabel.style.left = (listenerX + 20) + 'px';
+  distLabel.style.top = (listenerY - 28) + 'px';
+
+  if (audioEnabled && gainNode) {
+    const vol = Math.min(Math.max((db - 0) / 130, 0), 1) * 0.3;
+    gainNode.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.05);
+    if (oscillator) oscillator.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
+  }
+}
+
+function formatP(p) {
+  if (p >= 1) return p.toFixed(2) + ' W';
+  if (p >= 0.001) return (p * 1000).toFixed(1) + ' mW';
+  return (p * 1e6).toFixed(1) + ' μW';
+}
+
+// Wave animation
+function spawnWave() {
+  waves.push({ r: 0, alpha: 0.9, speed: SCALE * 0.8 });
+}
+
+function drawScene(ts) {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Background grid subtle
+  ctx.strokeStyle = 'rgba(30,45,69,0.4)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < W; x += 50) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 50) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // Wave period based on freq
+  const wavePeriod = Math.max(0.1, Math.min(2.0, 1 / (freq / 220)));
+  if (ts - lastWaveTime > wavePeriod * 400) {
+    spawnWave();
+    lastWaveTime = ts;
+  }
+
+  // Draw waves
+  for (let i = waves.length - 1; i >= 0; i--) {
+    const w = waves[i];
+    w.r += w.speed * 0.016;
+    w.alpha *= 0.985;
+    if (w.alpha < 0.01 || w.r > Math.max(W, H) * 1.5) { waves.splice(i, 1); continue; }
+    const fade = Math.max(0, w.alpha * (1 - w.r / (Math.max(W,H) * 0.9)));
+    ctx.beginPath();
+    ctx.arc(sourceX, sourceY, w.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(56,189,248,${fade})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // Distance line
+  ctx.beginPath();
+  ctx.setLineDash([4, 6]);
+  ctx.moveTo(sourceX, sourceY);
+  ctx.lineTo(listenerX, listenerY);
+  ctx.strokeStyle = 'rgba(129,140,248,0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Source (speaker)
+  drawSpeaker(sourceX, sourceY);
+
+  // Listener (ear person)
+  drawListener(listenerX, listenerY);
+
+  animId = requestAnimationFrame(drawScene);
+}
+
+function drawSpeaker(x, y) {
+  const s = 28;
+  // Glow
+  const grd = ctx.createRadialGradient(x, y, 0, x, y, s * 2);
+  grd.addColorStop(0, 'rgba(56,189,248,0.15)');
+  grd.addColorStop(1, 'rgba(56,189,248,0)');
+  ctx.beginPath(); ctx.arc(x, y, s * 2, 0, Math.PI * 2);
+  ctx.fillStyle = grd; ctx.fill();
+
+  // Speaker body
+  ctx.fillStyle = '#1e3a5f';
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(x - s * 0.5, y - s, s, s * 2, 6);
+  ctx.fill(); ctx.stroke();
+
+  // Cone
+  ctx.beginPath();
+  ctx.moveTo(x + s * 0.5, y - s * 0.6);
+  ctx.lineTo(x + s * 1.2, y - s * 1.2);
+  ctx.lineTo(x + s * 1.2, y + s * 1.2);
+  ctx.lineTo(x + s * 0.5, y + s * 0.6);
+  ctx.closePath();
+  ctx.fillStyle = '#0f3460';
+  ctx.fill(); ctx.stroke();
+
+  // Speaker circle
+  ctx.beginPath();
+  ctx.arc(x - s * 0.1, y, s * 0.45, 0, Math.PI * 2);
+  ctx.fillStyle = '#0a1628';
+  ctx.fill();
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(x - s * 0.1, y, s * 0.2, 0, Math.PI * 2);
+  ctx.fillStyle = '#38bdf8';
+  ctx.fill();
+
+  // Label
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px Phetsarath OT, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('ລຳໂພງ', x, y + s + 16);
+}
+
+function drawListener(x, y) {
+  const r = getR();
+  const db = getDB(getI(r));
+  const col = dbColor(db);
+  const s = 20;
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(x, y - s * 0.8, s * 0.7, 0, Math.PI * 2);
+  ctx.fillStyle = '#fbbf24';
+  ctx.fill();
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Body
+  ctx.beginPath();
+  ctx.moveTo(x, y - s * 0.15);
+  ctx.lineTo(x, y + s * 1.0);
+  ctx.lineTo(x - s * 0.5, y + s * 1.9);
+  ctx.moveTo(x, y + s * 1.0);
+  ctx.lineTo(x + s * 0.5, y + s * 1.9);
+  ctx.moveTo(x - s * 0.7, y + s * 0.3);
+  ctx.lineTo(x + s * 0.7, y + s * 0.3);
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Ear highlight
+  ctx.beginPath();
+  ctx.arc(x - s * 0.65, y - s * 0.8, s * 0.22, 0, Math.PI * 2);
+  ctx.fillStyle = col;
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#1a2235';
+  ctx.beginPath(); ctx.arc(x - s * 0.25, y - s * 0.9, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + s * 0.25, y - s * 0.9, 2.5, 0, Math.PI * 2); ctx.fill();
+
+  // Drag hint ring
+  ctx.beginPath();
+  ctx.arc(x, y, s * 1.5, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(129,140,248,0.2)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 5]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px Phetsarath OT, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('ລາກໄດ້', x, y + s * 2.4);
+}
+
+// Drag
+canvas.addEventListener('mousedown', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const dx = mx - listenerX, dy = my - listenerY;
+  if (Math.sqrt(dx*dx + dy*dy) < 40) isDragging = true;
+});
+canvas.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const rect = canvas.getBoundingClientRect();
+  listenerX = e.clientX - rect.left;
+  listenerY = e.clientY - rect.top;
+  listenerX = Math.max(40, Math.min(canvas.width - 40, listenerX));
+  listenerY = Math.max(40, Math.min(canvas.height - 40, listenerY));
+  clearPresets();
+  updateDisplay();
+});
+canvas.addEventListener('mouseup', () => isDragging = false);
+canvas.addEventListener('mouseleave', () => isDragging = false);
+
+// Touch
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const mx = t.clientX - rect.left, my = t.clientY - rect.top;
+  const dx = mx - listenerX, dy = my - listenerY;
+  if (Math.sqrt(dx*dx+dy*dy) < 50) isDragging = true;
+}, {passive:false});
+canvas.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  listenerX = t.clientX - rect.left;
+  listenerY = t.clientY - rect.top;
+  listenerX = Math.max(40, Math.min(canvas.width - 40, listenerX));
+  listenerY = Math.max(40, Math.min(canvas.height - 40, listenerY));
+  clearPresets();
+  updateDisplay();
+}, {passive:false});
+canvas.addEventListener('touchend', () => isDragging = false);
+
+// Sliders
+document.getElementById('powerSlider').addEventListener('input', function() {
+  P = Math.pow(10, parseFloat(this.value));
+  document.getElementById('pLabel').textContent = formatP(P);
+  clearPresets();
+  updateDisplay();
+});
+document.getElementById('freqSlider').addEventListener('input', function() {
+  freq = parseInt(this.value);
+  document.getElementById('fLabel').textContent = freq + ' Hz';
+  updateDisplay();
+});
+
+function clearPresets() {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+}
+
+function applyPreset(btn) {
+  clearPresets();
+  btn.classList.add('active');
+  const db = parseFloat(btn.dataset.db);
+  // beta = 10*log10(P/(4pi*r^2*I0)) => set R=1m, solve for P
+  // target dB at R=1m: I = I0 * 10^(db/10), P = I * 4 * pi * 1
+  const targetI = I0 * Math.pow(10, db / 10);
+  P = targetI * 4 * Math.PI * 1;
+  const logP = Math.log10(P);
+  document.getElementById('powerSlider').value = Math.max(-3, Math.min(3, logP));
+  document.getElementById('pLabel').textContent = formatP(P);
+  // Place listener at R=1m to the right
+  listenerX = sourceX + 1 * SCALE;
+  listenerY = sourceY;
+  updateDisplay();
+}
+
+// Audio
+function toggleAudio() {
+  if (!audioEnabled) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      oscillator = audioCtx.createOscillator();
+      gainNode = audioCtx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = freq;
+      gainNode.gain.value = 0.01;
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.start();
+      audioEnabled = true;
+      const btn = document.getElementById('audioBtn');
+      btn.textContent = '🔊 ປິດສຽງ';
+      btn.classList.add('active');
+      updateDisplay();
+    } catch(e) { alert('ບໍ່ສາມາດເປີດສຽງໄດ້: ' + e.message); }
+  } else {
+    if (oscillator) { oscillator.stop(); oscillator = null; }
+    if (audioCtx) { audioCtx.close(); audioCtx = null; }
+    gainNode = null;
+    audioEnabled = false;
+    const btn = document.getElementById('audioBtn');
+    btn.textContent = '🔇 ເປີດສຽງ';
+    btn.classList.remove('active');
+  }
+}
+
+function resetSim() {
+  P = 0.1;
+  freq = 440;
+  document.getElementById('powerSlider').value = Math.log10(0.1);
+  document.getElementById('freqSlider').value = 440;
+  document.getElementById('pLabel').textContent = formatP(P);
+  document.getElementById('fLabel').textContent = '440 Hz';
+  listenerX = canvas.width * 0.6;
+  listenerY = canvas.height * 0.5;
+  waves = [];
+  clearPresets();
+  updateDisplay();
+  if (audioEnabled) { toggleAudio(); }
+}
+
+// Init
+resize();
+window.addEventListener('resize', () => {
+  const oldLX = listenerX / canvas.width;
+  const oldLY = listenerY / canvas.height;
+  resize();
+  listenerX = canvas.width * oldLX;
+  listenerY = canvas.height * oldLY;
+  updateDisplay();
+});
+
+document.getElementById('pLabel').textContent = formatP(P);
+document.getElementById('fLabel').textContent = freq + ' Hz';
+updateDisplay();
+requestAnimationFrame(drawScene);
+</script>
+</body>
+</html>
