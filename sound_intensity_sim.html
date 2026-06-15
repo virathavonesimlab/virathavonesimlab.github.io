@@ -19,7 +19,7 @@
     --text-secondary: #8899bb;
     --border: #2a3a5a;
     --wave-color: rgba(56, 189, 248, 0.15);
-    --font: 'Phetsarath OT', 'Phetsarath OT', sans-serif;
+    --font: 'Phetsarath OT', 'Noto Sans Lao', sans-serif;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -219,6 +219,10 @@
   }
   .btn-mute { background: #1a2030; color: var(--accent-a); border-color: var(--accent-a); }
   .btn-mute:hover { background: #0e2236; }
+  .btn-listen-a { background: #0e2236; color: var(--accent-a); border-color: var(--accent-a); }
+  .btn-listen-a:hover, .btn-listen-a.playing { background: #1a3a50; box-shadow: 0 0 10px rgba(56,189,248,0.4); }
+  .btn-listen-b { background: #281500; color: var(--accent-b); border-color: var(--accent-b); }
+  .btn-listen-b:hover, .btn-listen-b.playing { background: #3a2000; box-shadow: 0 0 10px rgba(251,146,60,0.4); }
   .btn-reset { background: #1a2030; color: var(--accent-b); border-color: var(--accent-b); }
   .btn-reset:hover { background: #2a1a10; }
 
@@ -323,8 +327,12 @@
           </div>
         </div>
 
+        <div style="margin-top:4px; margin-bottom:6px; font-size:0.78rem; color:var(--text-secondary);">🎧 ຟັງສຽງຕາມຄວາມເຂັ້ມຈິງ (ຄວາມຖີ່ດຽວກັນ, ດັງຕ່າງກັນຕາມ R):</div>
         <div class="action-row">
-          <button class="btn btn-mute" id="btnMute" onclick="toggleMute()">🔇 ປິດສຽງ</button>
+          <button class="btn btn-listen-a" id="btnListenA" onclick="previewListener('A')">🔊 ຜູ້ຟັງ A</button>
+          <button class="btn btn-listen-b" id="btnListenB" onclick="previewListener('B')">🔊 ຜູ້ຟັງ B</button>
+        </div>
+        <div class="action-row">
           <button class="btn btn-reset" onclick="resetAll()">🔄 ເລີ່ມໃໝ່</button>
         </div>
 
@@ -333,7 +341,8 @@
           I = P / (4π R²) &nbsp; [W/m²]<br>
           β = 10 log₁₀(I / I₀) &nbsp; [dB]<br>
           I₀ = 10⁻¹² W/m²<br>
-          <span style="color:var(--accent-diff)">Δβ = β₂ − β₁ = 10 log₁₀(I₂/I₁)</span>
+          <span style="color:var(--accent-diff)">Δβ = β₂ − β₁ = 10 log₁₀(I₂/I₁)</span><br>
+          <span style="color:#34d399; font-size:0.73rem;">🎵 ທັງ A, B ຟັງຄວາມຖີ່ດຽວກັນ (440 Hz)<br>ດັງ-ເບົາຕ່າງກັນຕາມ I ເທົ່ານັ້ນ</span>
         </div>
       </div>
     </div>
@@ -345,8 +354,6 @@
 const I0 = 1e-12;
 let mode = 'varyR'; // varyR, varyP, free
 let P1 = 10, P2 = 10;
-let muted = false;
-let audioCtx = null, gainNode = null, oscillator = null;
 
 // Canvas setup
 const canvas = document.getElementById('simCanvas');
@@ -434,26 +441,29 @@ function onMove(e) {
 
   if (dragging === 'A') {
     if (mode === 'varyP') {
-      // Lock R1=R2, move both symmetrically by adjusting both x
-      const newR1px = dist(cx, listA.y, spkX(), spkY());
-      // keep same angle, just update x,y
       listA.x = cx; listA.y = cy;
-      // sync B to same distance
+      // Sync B to same pixel distance (= same R in meters)
+      const newRpx = dist(cx, cy, spkX(), spkY());
       const angle = Math.atan2(listB.y - spkY(), listB.x - spkX());
-      listB.x = Math.round(spkX() + newR1px * Math.cos(angle));
-      listB.y = Math.round(spkY() + newR1px * Math.sin(angle));
+      listB.x = Math.round(spkX() + newRpx * Math.cos(angle));
+      listB.y = Math.round(spkY() + newRpx * Math.sin(angle));
       clampListeners();
+      // Update R slider display
+      document.getElementById('sliderRlock').value = Math.round(pxToM(newRpx) * 2) / 2;
+      document.getElementById('lblRlock').textContent = pxToM(newRpx).toFixed(1) + ' m';
     } else {
       listA.x = cx; listA.y = cy;
     }
   } else {
     if (mode === 'varyP') {
       listB.x = cx; listB.y = cy;
-      const newR2px = dist(cx, cy, spkX(), spkY());
+      const newRpx = dist(cx, cy, spkX(), spkY());
       const angle = Math.atan2(listA.y - spkY(), listA.x - spkX());
-      listA.x = Math.round(spkX() + newR2px * Math.cos(angle));
-      listA.y = Math.round(spkY() + newR2px * Math.sin(angle));
+      listA.x = Math.round(spkX() + newRpx * Math.cos(angle));
+      listA.y = Math.round(spkY() + newRpx * Math.sin(angle));
       clampListeners();
+      document.getElementById('sliderRlock').value = Math.round(pxToM(newRpx) * 2) / 2;
+      document.getElementById('lblRlock').textContent = pxToM(newRpx).toFixed(1) + ' m';
     } else {
       listB.x = cx; listB.y = cy;
     }
@@ -466,24 +476,101 @@ canvas.addEventListener('mouseleave', () => { dragging = null; });
 canvas.addEventListener('touchend', () => { dragging = null; });
 
 // ===== Audio =====
+/*
+ * Physics: Both listeners hear the SAME frequency (440 Hz) from the same speaker.
+ * Only loudness (gain) differs — proportional to intensity I = P/(4πR²).
+ * We map intensity to gain using:  gain = k * sqrt(I / I_ref)
+ * where I_ref is a comfortable reference (e.g. I at R=5m, P=10W).
+ * sqrt because Web Audio gain is amplitude (pressure), not power.
+ * We clamp gain to [0.0001, 0.55] for safe headphone output.
+ */
+let audioCtx = null;
+let currentBeta = { A: 0, B: 0 };   // updated every animation frame
+let currentI    = { A: 0, B: 0 };   // intensity, updated every frame
+
+// Each listener has a persistent oscillator + gain node when "playing"
+let listenerAudio = {
+  A: { osc: null, gainNode: null, active: false, timer: null },
+  B: { osc: null, gainNode: null, active: false, timer: null }
+};
+
+const FREQ = 440;          // Same frequency for both — physics requires this
+const I_REF = 1.59e-3;    // I at R=5m, P=10W  →  comfortable reference level
+const GAIN_REF = 0.18;    // gain at I_REF (comfortable listening)
+
 function initAudio() {
   if (audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  oscillator = audioCtx.createOscillator();
-  gainNode = audioCtx.createGain();
-  oscillator.type = 'sine';
-  oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-  oscillator.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
-  gainNode.gain.setValueAtTime(0.06, audioCtx.currentTime);
-  oscillator.start();
 }
 
-function toggleMute() {
+// Convert intensity (W/m²) → speaker gain (amplitude 0..1)
+// gain ∝ sqrt(I) because sound pressure amplitude ∝ sqrt(intensity)
+function intensityToGain(I) {
+  if (!isFinite(I) || I <= 0) return 0.0001;
+  const g = GAIN_REF * Math.sqrt(I / I_REF);
+  return Math.max(0.0001, Math.min(0.55, g));
+}
+
+function stopListener(who) {
+  const la = listenerAudio[who];
+  if (la.timer) { clearTimeout(la.timer); la.timer = null; }
+  if (la.active && la.gainNode) {
+    // Fade out smoothly then stop oscillator
+    const t = audioCtx.currentTime;
+    la.gainNode.gain.cancelScheduledValues(t);
+    la.gainNode.gain.setValueAtTime(la.gainNode.gain.value, t);
+    la.gainNode.gain.linearRampToValueAtTime(0, t + 0.15);
+    const osc = la.osc;
+    setTimeout(() => { try { osc.stop(); osc.disconnect(); } catch(e){} }, 200);
+    la.gainNode.disconnect();
+  }
+  la.osc = null; la.gainNode = null; la.active = false;
+  const btn = document.getElementById(who === 'A' ? 'btnListenA' : 'btnListenB');
+  btn.classList.remove('playing');
+  btn.textContent = who === 'A' ? '🔊 ຜູ້ຟັງ A' : '🔊 ຜູ້ຟັງ B';
+}
+
+function previewListener(who) {
   initAudio();
-  muted = !muted;
-  gainNode.gain.setValueAtTime(muted ? 0 : 0.06, audioCtx.currentTime);
-  document.getElementById('btnMute').textContent = muted ? '🔊 ເປີດສຽງ' : '🔇 ປິດສຽງ';
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const la = listenerAudio[who];
+  if (la.active) { stopListener(who); return; }   // toggle off
+
+  // Build audio graph
+  const osc      = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(FREQ, audioCtx.currentTime);  // SAME freq, only gain differs
+
+  const targetGain = intensityToGain(currentI[who]);
+  gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+  gainNode.gain.linearRampToValueAtTime(targetGain, audioCtx.currentTime + 0.08);
+
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  osc.start();
+
+  la.osc = osc; la.gainNode = gainNode; la.active = true;
+
+  const btn = document.getElementById(who === 'A' ? 'btnListenA' : 'btnListenB');
+  btn.classList.add('playing');
+  btn.textContent = who === 'A' ? '⏹ ຢຸດ A' : '⏹ ຢຸດ B';
+
+  // Auto-stop after 3s
+  la.timer = setTimeout(() => stopListener(who), 3000);
+}
+
+// Called every animation frame — smoothly updates gain of active listeners
+function updateAudioGains() {
+  if (!audioCtx) return;
+  ['A', 'B'].forEach(who => {
+    const la = listenerAudio[who];
+    if (!la.active || !la.gainNode) return;
+    const targetGain = intensityToGain(currentI[who]);
+    // Smooth ramp so gain tracks position changes in real-time
+    la.gainNode.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.08);
+  });
 }
 
 // ===== Mode =====
@@ -546,6 +633,8 @@ function onSliderRlock() {
 }
 
 function resetAll() {
+  stopListener('A');
+  stopListener('B');
   P1 = 10; P2 = 10;
   document.getElementById('sliderP').value = 10;
   document.getElementById('sliderP1').value = 10;
@@ -693,6 +782,13 @@ function updateUI(r1, r2, i1, i2, b1, b2) {
   document.getElementById('valB2').textContent = b2.toFixed(2) + ' dB';
   const diff = Math.abs(b2 - b1);
   document.getElementById('valDiff').textContent = diff.toFixed(1);
+
+  // Track physics values for audio
+  currentBeta.A = b1; currentBeta.B = b2;
+  currentI.A = i1;    currentI.B = i2;
+
+  // Smoothly update gain of any active listener in real-time
+  updateAudioGains();
 
   // Formula detail
   let detail = '';
