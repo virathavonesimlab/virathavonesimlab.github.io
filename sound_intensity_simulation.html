@@ -29,7 +29,7 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Phetsarath OT', 'Phetsarath OT', sans-serif;
+    font-family: 'Phetsarath OT', 'Noto Sans Lao', sans-serif;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -481,8 +481,15 @@ function updateDisplay() {
   distLabel.style.top = (listenerY - 28) + 'px';
 
   if (audioEnabled && gainNode) {
-    const vol = Math.min(Math.max((db - 0) / 130, 0), 1) * 0.3;
-    gainNode.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.05);
+    // ຄຳນວນ amplitude ຈາກ dB ຕາມຫຼັກການ: amplitude ∝ 10^(dB/20)
+    // ປັບ reference: 60 dB = ລະດັບທຳມະດາ (gain ~0.05), 0 dB = ງຽບ, 120 dB = ດັງສຸດ
+    // clamp dB ລະຫວ່າງ 0–120 ກ່ອນຄຳນວນ ເພື່ອປ້ອງກັນຫູ
+    const dbClamped = Math.min(Math.max(db, 0), 110);
+    // normalize: amplitude = 10^((dB - 90) / 20), ໃຫ້ 90dB ≈ gain 1.0 ກ່ອນ scale
+    const rawAmp = Math.pow(10, (dbClamped - 90) / 20);
+    // scale ລົງ 0.08 ເພື່ອປ້ອງກັນລຳໂພງ, clamp 0–0.4
+    const vol = Math.min(Math.max(rawAmp * 0.08, 0), 0.4);
+    gainNode.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.08);
     if (oscillator) oscillator.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
   }
 }
